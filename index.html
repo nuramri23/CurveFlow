@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CurveFlow by anggimv_</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="header">
+  <span class="logo">CurveFlow <span style="font-weight:400;opacity:0.6;font-size:10px;">by anggimv_</span></span>
+  <div style="display:flex;align-items:center;gap:7px;">
+    <span style="font-size:10px;color:var(--text-dim)" id="statusText">Ready</span>
+    <div class="status-dot" id="statusDot"></div>
+    <button onclick="location.reload()" title="Refresh panel" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:13px;padding:0 2px;line-height:1;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text-dim)'">↺</button>
+    <button onclick="showAbout()" title="About" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:13px;padding:0 2px;line-height:1;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text-dim)'">ⓘ</button>
+  </div>
+</div>
+
+<!-- ABOUT MODAL -->
+<div id="aboutModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:300;align-items:center;justify-content:center;">
+  <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:20px 24px;max-width:260px;width:90%;text-align:center;">
+    <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px;">CurveFlow</div>
+    <div style="font-size:11px;color:var(--accent);margin-bottom:12px;">by anggimv_</div>
+    <div style="font-size:10px;color:var(--text-dim);line-height:1.6;margin-bottom:14px;">
+      Curve editor extension untuk After Effects.<br>
+      Terinspirasi dari Flow dan Wavy 3am.<br><br>
+      Dibuat oleh anggimv_.<br>
+    </div>
+    <div style="font-size:10px;color:var(--border);margin-bottom:14px;">v1.0.0</div>
+    <button onclick="closeAbout()" style="background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:6px;padding:6px 20px;color:#fff;font-size:11px;font-weight:600;cursor:pointer;">Close</button>
+  </div>
+</div>
+
+<div class="main" id="mainLayout">
+
+  <!-- LEFT PANEL: canvas + tombol fix (di mode lebar jadi kolom kiri) -->
+  <div class="left-panel">
+
+    <!-- CANVAS SECTION -->
+    <div class="canvas-section" id="canvasSection">
+      <div class="canvas-label">
+        <span>Curve Editor</span>
+        <div class="canvas-label-tools">
+          <button class="tool-btn" id="snapBtn" onclick="toggleSnap()">Snap</button>
+          <button class="tool-btn" id="showValsBtn" onclick="toggleShowVals()">X/Y</button>
+          <button class="tool-btn" onclick="bgImageClick()" title="Set background image/gif">BG</button>
+          <button class="tool-btn" id="clearBgBtn" onclick="clearBgImage()" title="Clear background" style="display:none;color:var(--danger)">✕</button>
+          <input type="file" id="bgImageInput" accept="image/*,.gif" style="display:none" onchange="onBgImageChange(event)"/>
+        </div>
+      </div>
+      <div class="canvas-container" id="canvasContainer">
+        <canvas id="curveCanvas"></canvas>
+        <div class="dbl-click-hint">dbl-click = add · right-click = remove</div>
+      </div>
+    </div>
+
+    <!-- SPLITTER vertikal (mode sempit) -->
+    <div class="splitter" id="splitterV"><div class="splitter-bar"></div></div>
+
+    <!-- TOMBOL FIX — tidak scroll di semua mode -->
+    <div class="bottom-controls">
+      <div class="tension-row">
+        <span class="tension-label">Tension</span>
+        <input type="range" class="tension-slider" id="tensionSlider" min="-100" max="100" value="0" oninput="onTensionChange(this.value)">
+        <span class="tension-val" id="tensionVal">0</span>
+      </div>
+      <div class="undo-row">
+        <button class="btn-undo" id="undoBtn" onclick="undo()" disabled>↩ Undo</button>
+        <button class="btn-undo" id="redoBtn" onclick="redo()" disabled>↪ Redo</button>
+      </div>
+      <div class="action-row">
+        <button class="btn-reset" onclick="resetCurve()">Reset</button>
+        <button class="btn-apply" onclick="applyToAE()">Apply to Keyframes</button>
+        <button class="btn-reset" onclick="debugApply()" title="Debug: lihat nilai ease" style="font-size:9px;padding:8px 6px;">DBG</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SPLITTER horizontal (mode lebar) -->
+  <div class="splitter-h" id="splitterH"><div class="splitter-bar-h"></div></div>
+
+  <!-- RIGHT PANEL: hanya preset yang scroll -->
+  <div class="right-panel">
+    <div class="right-panel-title">Presets</div>
+    <div class="presets-scroll">
+      <div class="presets-grid" id="presetsGrid"></div>
+    </div>
+    <div class="preset-save-area">
+      <input class="preset-input" id="presetName" placeholder="Preset name…" />
+      <div style="display:flex;gap:4px;">
+        <button class="btn-sm" style="flex:1" onclick="saveCurrentPreset()">Save</button>
+        <button class="btn-sm" onclick="renameSelectedPreset()" title="Rename selected preset">✏</button>
+        <button class="btn-sm" style="color:var(--danger)" onclick="deleteSelectedPreset()">Del</button>
+      </div>
+      <div style="display:flex;gap:4px;">
+        <button class="btn-sm" style="flex:1;font-size:10px;" onclick="exportPresets()">⬇ Export</button>
+        <button class="btn-sm" style="flex:1;font-size:10px;" onclick="importPresetsClick()">⬆ Import</button>
+        <input type="file" id="importFileInput" accept=".json,.flow" style="display:none" onchange="importPresets(event)"/>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="crop-modal" id="cropModal">
+  <div class="crop-modal-title">Crop 1:1</div>
+  <div class="crop-hint">Drag kotak untuk geser · Scroll untuk zoom</div>
+  <div class="crop-wrap" id="cropWrap">
+    <img id="cropImg" src="" alt=""/>
+    <div class="crop-box" id="cropBox"></div>
+  </div>
+  <div class="crop-actions">
+    <button class="btn-crop-cancel" onclick="closeCropModal()">Cancel</button>
+    <button class="btn-crop-ok" onclick="confirmCrop()">Apply</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- SEPARATE DIMENSION CONFIRM MODAL -->
+<div id="separateModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:300;align-items:center;justify-content:center;">
+  <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:18px 20px;max-width:240px;width:90%;text-align:center;">
+    <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px;">Separate Dimensions?</div>
+    <div style="font-size:10px;color:var(--text-dim);line-height:1.6;margin-bottom:16px;">
+      Kurva keluar dari batas normal.<br>
+      Position perlu di-separate agar overshoot/bounce bisa diterapkan.
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="onSeparateNo()" style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:7px;color:var(--text-dim);font-size:11px;cursor:pointer;">No</button>
+      <button onclick="onSeparateYes()" style="flex:1;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:6px;padding:7px;color:#fff;font-size:11px;font-weight:600;cursor:pointer;">Yes</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ================================================
+// CurveFlow by anggimv_ — Curve Editor
+// ================================================
+
+const canvas  = document.getElementById('curveCanvas');
+const ctx     = canvas.getContext('2d');
+const container    = document.getElementById('canvasContainer');
+const mainLayout   = document.getElementById('mainLayout');
+const canvasSection= document.getElementById('canvasSection');
+const PAD = 36;
+const WIDE_THRESHOLD = 480;
+
+// ---- Feature flags ----
+let snapEnabled  = false;
+let showVals     = false;
+const SNAP_GRID  = 0.25;
+
+// ---- Points (deklarasi awal supaya fungsi lain bisa akses) ----
+function getDefaultPoints() {
+  return [
+    { x:0, y:0, cp1x:0, cp1y:0, cp2x:0.35, cp2y:0, isNew:false },
+    { x:1, y:1, cp1x:0.65, cp1y:1, cp2x:1, cp2y:1, isNew:false }
+  ];
+}
+let points = getDefaultPoints();
+
+// ---- Background image + Crop ----
+let bgImage = null;
+let bgCroppedCanvas = null; // hasil crop disimpan di offscreen canvas
+let bgGifEl = null;
+let bgOpacity = 0.35;
+
+// Crop state
+let cropSrcUrl = null;
+let cropNatW = 0, cropNatH = 0;    // ukuran asli gambar
+let cropDispW = 0, cropDispH = 0;  // ukuran tampil di modal
+let cropScale = 1;                  // rasio natW/dispW
+let cropX = 0, cropY = 0;          // posisi crop box (dalam koordinat display)
+let cropSize = 0;                   // ukuran crop box (square, display px)
+let cropDragging = false;
+let cropDragStartX = 0, cropDragStartY = 0;
+let cropDragOrigX = 0, cropDragOrigY = 0;
+
+function bgImageClick() { document.getElementById('bgImageInput').click(); }
+
+function onBgImageChange(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  const isGif = file.type === 'image/gif';
+
+  if (isGif) {
+    // GIF: baca sebagai dataURL untuk preview, simpan pakai file.path langsung
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const gifData = e.target.result;
+      const img = new Image();
+      img.onload = () => { openCropModal(gifData, img, true, file.path || null); };
+      img.src = gifData;
+    };
+    reader.readAsDataURL(file);
+  } else {
+    // Static image: buka crop modal
+    const img = new Image();
+    img.onload = () => { openCropModal(url, img); };
+    img.src = url;
+  }
+  event.target.value = '';
+}
+
+let cropIsGif = false;
+let cropGifFilePath = null;
+
+function openCropModal(url, img, isGif, filePath) {
+  cropIsGif = !!isGif;
+  cropGifFilePath = filePath || null;
+  cropSrcUrl = url;
+  cropNatW = img.naturalWidth;
+  cropNatH = img.naturalHeight;
+
+  const cropImg = document.getElementById('cropImg');
+  cropImg.src = url;
+  cropImg.onload = () => {
+    cropDispW = cropImg.clientWidth;
+    cropDispH = cropImg.clientHeight;
+    cropScale = cropNatW / cropDispW;
+
+    // Default crop: square di tengah
+    cropSize = Math.min(cropDispW, cropDispH);
+    cropX = (cropDispW - cropSize) / 2;
+    cropY = (cropDispH - cropSize) / 2;
+    updateCropBox();
+  };
+
+  document.getElementById('cropModal').classList.add('show');
+}
+
+function updateCropBox() {
+  const box = document.getElementById('cropBox');
+  box.style.left   = cropX + 'px';
+  box.style.top    = cropY + 'px';
+  box.style.width  = cropSize + 'px';
+  box.style.height = cropSize + 'px';
+}
+
+function closeCropModal() {
+  document.getElementById('cropModal').classList.remove('show');
+  cropSrcUrl = null;
+}
+
+function confirmCrop() {
+  const srcX = cropX * cropScale;
+  const srcY = cropY * cropScale;
+  const srcSize = cropSize * cropScale;
+
+  bgImage = null;
+  document.getElementById('clearBgBtn').style.display = '';
+
+  if (cropIsGif) {
+    // GIF: tampilkan animasi via overlay, simpan frame pertama sebagai JPEG
+    const img = document.getElementById('cropImg');
+    const gifSrc = img.src;
+
+    // Simpan crop sebagai fraksi (0-1) dari dimensi gambar
+    const gifCropL  = cropX / cropDispW;
+    const gifCropT  = cropY / cropDispH;
+    const gifCropFW = cropSize / cropDispW;
+    const gifCropFH = cropSize / cropDispH;
+    if (bgGifEl) { bgGifEl.remove(); bgGifEl = null; }
+    if (bgCroppedCanvas) bgCroppedCanvas = null;
+    bgGifEl = applyGifCrop(gifSrc, gifCropL, gifCropT, gifCropFW, gifCropFH);
+    container.appendChild(bgGifEl);
+
+    if (cropGifFilePath && csInterface) {
+      const safePath = cropGifFilePath.replace(/\\/g, '/');
+      const cropInfo = gifCropPx + '|' + gifCropPy + '|' + gifCropScale;
+      csInterface.evalScript('copyBgGifFromPath("' + safePath + '","' + cropInfo + '")', function(r) {
+        console.log('GIF copy result:', r);
+      });
+    } else {
+      try { saveBgPersistent(gifSrc, true); } catch(e) {}
+    }
+  } else {
+    const offscreen = document.createElement('canvas');
+    offscreen.width = offscreen.height = Math.round(srcSize);
+    const octx = offscreen.getContext('2d');
+    const img = document.getElementById('cropImg');
+    octx.drawImage(img, srcX, srcY, srcSize, srcSize, 0, 0, offscreen.width, offscreen.height);
+    bgCroppedCanvas = offscreen;
+    if (bgGifEl) { bgGifEl.remove(); bgGifEl = null; }
+    // Compress sampai ≤1MB
+    const MAX_BYTES = 1 * 1024 * 1024;
+    let quality = 0.95;
+    let imgData = offscreen.toDataURL('image/jpeg', quality);
+    while (imgData.length * 0.75 > MAX_BYTES && quality > 0.1) {
+      quality -= 0.05;
+      imgData = offscreen.toDataURL('image/jpeg', quality);
+    }
+    try { saveBgPersistent(imgData); } catch(e) {}
+  }
+
+  closeCropModal();
+  draw();
+}
+
+// Crop box drag
+const cropWrap = document.getElementById('cropWrap');
+const cropBox  = document.getElementById('cropBox');
+
+cropBox.addEventListener('mousedown', e => {
+  cropDragging = true;
+  cropDragStartX = e.clientX;
+  cropDragStartY = e.clientY;
+  cropDragOrigX  = cropX;
+  cropDragOrigY  = cropY;
+  e.preventDefault();
+  e.stopPropagation();
+});
+
+document.addEventListener('mousemove', e => {
+  if (!cropDragging) return;
+  const dx = e.clientX - cropDragStartX;
+  const dy = e.clientY - cropDragStartY;
+  cropX = Math.max(0, Math.min(cropDispW - cropSize, cropDragOrigX + dx));
+  cropY = Math.max(0, Math.min(cropDispH - cropSize, cropDragOrigY + dy));
+  updateCropBox();
+});
+
+document.addEventListener('mouseup', () => { cropDragging = false; });
+
+// Scroll to resize crop box
+cropWrap.addEventListener('wheel', e => {
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? -10 : 10;
+  const newSize = Math.max(40, Math.min(Math.min(cropDispW, cropDispH), cropSize + delta));
+  const cx = cropX + cropSize / 2;
+  const cy = cropY + cropSize / 2;
+  cropSize = newSize;
+  cropX = Math.max(0, Math.min(cropDispW - cropSize, cx - cropSize / 2));
+  cropY = Math.max(0, Math.min(cropDispH - cropSize, cy - cropSize / 2));
+  updateCropBox();
+}, { passive: false });
+
+function clearBgImage() {
+  bgImage = null;
+  bgCroppedCanvas = null;
+  if (bgGifEl) { bgGifEl.remove(); bgGifEl = null; }
+  document.getElementById('clearBgBtn').style.display = 'none';
+  try { clearBgPersistent(); } catch(e) {}
+  draw();
+}
+
+let csInterface = null;
+
+// Buat GIF overlay dengan crop yang benar (tidak melebar)
+// cL, cT = fraksi kiri/atas dari gambar (0-1)
+// cFW, cFH = fraksi lebar/tinggi dari gambar yang di-crop (0-1)
+function applyGifCrop(src, cL, cT, cFW, cFH) {
+  // Wrapper overflow:hidden — area tampil = 100% canvas
+  const wrapper = document.createElement('div');
+  wrapper.id = 'bgGifOverlay';
+  wrapper.style.cssText = `position:absolute;top:0;left:0;width:100%;height:100%;overflow:hidden;border-radius:8px;pointer-events:none;opacity:${bgOpacity};`;
+
+  const img = document.createElement('img');
+  img.src = src;
+  // Skala: gambar diperbesar supaya bagian crop mengisi wrapper
+  // width = 100% / cFW, height = 100% / cFH
+  // left = -(cL/cFW)*100%, top = -(cT/cFH)*100%
+  const wPct  = (1 / cFW) * 100;
+  const hPct  = (1 / cFH) * 100;
+  const lPct  = -(cL / cFW) * 100;
+  const tPct  = -(cT / cFH) * 100;
+  img.style.cssText = `position:absolute;width:${wPct}%;height:${hPct}%;left:${lPct}%;top:${tPct}%;pointer-events:none;`;
+  wrapper.appendChild(img);
+  return wrapper;
+}
+
+function saveBgPersistent(dataUrl, isGif) {
+  if (!csInterface) return;
+  if (isGif) {
+    // GIF: kirim via chunks karena data besar
+    saveBgGifChunked(dataUrl);
+  } else {
+    // JPG: kirim sekaligus (sudah di-compress ≤1MB)
+    const payload = JSON.stringify({ bg: dataUrl, isGif: false });
+    let b64;
+    try { b64 = btoa(unescape(encodeURIComponent(payload))); }
+    catch(e) { console.log('BG encode error:', e); return; }
+    csInterface.evalScript('saveBgToFile("' + b64 + '")', function(r) {
+      if (r && r.startsWith('error')) console.log('BG save error:', r);
+      else console.log('BG saved:', r);
+    });
+  }
+}
+
+function saveBgGifChunked(dataUrl) {
+  if (!csInterface) return;
+  const commaIdx = dataUrl.indexOf(',');
+  const b64data = commaIdx >= 0 ? dataUrl.substring(commaIdx + 1) : dataUrl;
+  const CHUNK = 200000; // 200KB per chunk — lebih sedikit calls
+  const total = Math.ceil(b64data.length / CHUNK);
+  let i = 0;
+
+  csInterface.evalScript('saveBgGifInit()', function() {
+    function sendChunk() {
+      if (i >= total) {
+        csInterface.evalScript('saveBgGifFinalize()', function(r) {
+          console.log('GIF saved:', r);
+        });
+        return;
+      }
+      const chunk = b64data.substring(i * CHUNK, (i + 1) * CHUNK);
+      i++;
+      csInterface.evalScript('saveBgGifChunk("' + chunk + '")', function() {
+        // Delay 50ms antar chunk supaya AE tidak freeze
+        setTimeout(sendChunk, 50);
+      });
+    }
+    sendChunk();
+  });
+}
+
+function loadBgPersistent(callback) {
+  if (!csInterface) return;
+  csInterface.evalScript('loadBgFromFile()', function(result) {
+    if (!result || result === 'undefined' || result.length < 3) return;
+    try {
+      // Format: path||isGif||cropPx|cropPy|cropScale
+      const parts = result.split('||');
+      const filePath = parts[0];
+      const isGif = parts[1] === '1';
+      const cropInfo = parts[2] || '0|0|100';
+      const fileUrl = 'file:///' + filePath.replace(/\\/g, '/');
+      callback(fileUrl, isGif, cropInfo);
+    } catch(e) { console.log('load error:', e); }
+  });
+}
+
+function clearBgPersistent() {
+  if (csInterface) csInterface.evalScript('clearBgFromFile()');
+}
+
+
+// BG save/load pakai Node.js fs (tersedia di CEP)
+function getBgFilePath() {
+  try {
+    if (typeof window.__adobe_cep__ !== 'undefined') {
+      const info = JSON.parse(window.__adobe_cep__.getSystemPath('extension'));
+      return info + '/bg_cache.json';
+    }
+  } catch(e) {}
+  return null;
+}
+
+// Debug: cek apakah Node.js tersedia
+console.log('Node.js available:', typeof require !== 'undefined');
+if (typeof require !== 'undefined') {
+  try {
+    const path = require('path');
+    console.log('location.href:', location.href);
+    console.log('decoded:', decodeURIComponent(location.href));
+  } catch(e) { console.log('path error:', e.message); }
+}
+
+
+
+
+const undoStack = [];
+const redoStack = [];
+const MAX_UNDO  = 30;
+
+function saveUndoState() {
+  undoStack.push(JSON.stringify(points));
+  if (undoStack.length > MAX_UNDO) undoStack.shift();
+  redoStack.length = 0;
+  updateUndoButtons();
+}
+
+function undo() {
+  if (!undoStack.length) return;
+  redoStack.push(JSON.stringify(points));
+  points = JSON.parse(undoStack.pop());
+  updateUndoButtons();
+  draw();
+}
+
+function redo() {
+  if (!redoStack.length) return;
+  undoStack.push(JSON.stringify(points));
+  points = JSON.parse(redoStack.pop());
+  updateUndoButtons();
+  draw();
+}
+
+function updateUndoButtons() {
+  document.getElementById('undoBtn').disabled = undoStack.length === 0;
+  document.getElementById('redoBtn').disabled = redoStack.length === 0;
+}
+
+// Keyboard shortcut Ctrl+Z / Ctrl+Y
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo(); }
+  if (e.ctrlKey && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); redo(); }
+});
+
+// ---- Snap ----
+function toggleSnap() {
+  snapEnabled = !snapEnabled;
+  document.getElementById('snapBtn').classList.toggle('active', snapEnabled);
+}
+
+function snapVal(v) {
+  if (!snapEnabled) return v;
+  return Math.round(v / SNAP_GRID) * SNAP_GRID;
+}
+
+// ---- Show X/Y values ----
+function toggleShowVals() {
+  showVals = !showVals;
+  document.getElementById('showValsBtn').classList.toggle('active', showVals);
+  draw();
+}
+
+// ---- Tension slider ----
+let baseTensionPoints = null; // points sebelum tension diubah
+
+function onTensionChange(val) {
+  document.getElementById('tensionVal').textContent = val;
+  if (!baseTensionPoints) baseTensionPoints = JSON.parse(JSON.stringify(points));
+  const t = val / 100; // -1 to 1
+  // Apply tension: geser handle mendekati atau menjauhi titik
+  const newPts = JSON.parse(JSON.stringify(baseTensionPoints));
+  newPts.forEach((pt, i) => {
+    const scale = 1 + t * 0.8;
+    if (i < newPts.length - 1) {
+      pt.cp2x = pt.x + (baseTensionPoints[i].cp2x - pt.x) * scale;
+      pt.cp2y = pt.y + (baseTensionPoints[i].cp2y - pt.y) * scale;
+    }
+    if (i > 0) {
+      pt.cp1x = pt.x + (baseTensionPoints[i].cp1x - pt.x) * scale;
+      pt.cp1y = pt.y + (baseTensionPoints[i].cp1y - pt.y) * scale;
+    }
+  });
+  points = newPts;
+  draw();
+}
+
+// Reset tension base saat drag titik
+function resetTensionBase() {
+  baseTensionPoints = null;
+  document.getElementById('tensionSlider').value = 0;
+  document.getElementById('tensionVal').textContent = '0';
+}
+
+// ---- Responsive layout ----
+const PRESET_CARD_MIN = 75; // px minimum per card sebelum tambah kolom
+
+function updatePresetColumns() {
+  const grid = document.getElementById('presetsGrid');
+  if (!grid) return;
+  const panelW = grid.parentElement.clientWidth - 12; // minus padding
+  const cols = Math.max(1, Math.floor(panelW / PRESET_CARD_MIN));
+  grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+}
+
+function updateLayout() {
+  const w = document.body.clientWidth;
+  mainLayout.classList.toggle('wide', w >= WIDE_THRESHOLD);
+  setCanvasSize();
+  updatePresetColumns();
+}
+
+function setCanvasSize() {
+  const rect = container.getBoundingClientRect();
+  const w = Math.floor(rect.width) || 300;
+  const h = Math.floor(rect.height) || 300;
+  canvas.width = w;
+  canvas.height = h;
+  draw();
+}
+
+let _roTimer = null;
+const ro = new ResizeObserver(() => {
+  if (_roTimer) return;
+  _roTimer = requestAnimationFrame(() => {
+    _roTimer = null;
+    updateLayout();
+  });
+});
+ro.observe(document.body);
+
+// ---- Splitter drag ----
+const splitterV = document.getElementById('splitterV');
+const splitterH = document.getElementById('splitterH');
+const rightPanel = document.querySelector('.right-panel');
+const leftPanel  = document.querySelector('.left-panel');
+
+let splitterDragging = false;
+let splitterType = null; // 'v' or 'h'
+let splitterStart = 0;
+let splitterStartSize = 0;
+
+splitterV.addEventListener('mousedown', e => {
+  splitterDragging = true;
+  splitterType = 'v';
+  splitterStart = e.clientY;
+  splitterStartSize = canvasSection.getBoundingClientRect().height;
+  splitterV.classList.add('dragging');
+  e.preventDefault();
+});
+
+splitterH.addEventListener('mousedown', e => {
+  splitterDragging = true;
+  splitterType = 'h';
+  splitterStart = e.clientX;
+  splitterStartSize = rightPanel.getBoundingClientRect().width;
+  splitterH.classList.add('dragging');
+  e.preventDefault();
+});
+
+document.addEventListener('mousemove', e => {
+  if (!splitterDragging) return;
+  if (splitterType === 'v') {
+    const dy = e.clientY - splitterStart;
+    const newH = Math.max(80, Math.min(window.innerHeight - 160, splitterStartSize + dy));
+    canvasSection.style.height = newH + 'px';
+  } else {
+    const dx = e.clientX - splitterStart;
+    const totalW = mainLayout.getBoundingClientRect().width;
+    // splitter geser ke kiri = preset lebih lebar, ke kanan = lebih sempit
+    const newW = Math.max(80, Math.min(totalW - 120, splitterStartSize - dx));
+    rightPanel.style.width = newW + 'px';
+    rightPanel.style.maxWidth = newW + 'px';
+    updatePresetColumns();
+  }
+  setCanvasSize();
+});
+
+document.addEventListener('mouseup', () => {
+  if (!splitterDragging) return;
+  splitterDragging = false;
+  splitterType = null;
+  splitterV.classList.remove('dragging');
+  splitterH.classList.remove('dragging');
+});
+
+// ---- Points state ----
+let dragging = null;
+let hoveredPoint = null;
+let selectedPreset = null;
+
+// ---- Built-in presets ----
+const builtinPresets = {
+  'Linear':    [ {x:0,y:0,cp1x:0,cp1y:0,cp2x:0.33,cp2y:0.33,isNew:false}, {x:1,y:1,cp1x:0.67,cp1y:0.67,cp2x:1,cp2y:1,isNew:false} ],
+  'Ease':      [ {x:0,y:0,cp1x:0,cp1y:0,cp2x:0.42,cp2y:0,isNew:false}, {x:1,y:1,cp1x:0.58,cp1y:1,cp2x:1,cp2y:1,isNew:false} ],
+  'Ease In':   [ {x:0,y:0,cp1x:0,cp1y:0,cp2x:0,cp2y:0,isNew:false}, {x:1,y:1,cp1x:0.58,cp1y:1,cp2x:1,cp2y:1,isNew:false} ],
+  'Ease Out':  [ {x:0,y:0,cp1x:0,cp1y:0,cp2x:0.42,cp2y:0,isNew:false}, {x:1,y:1,cp1x:1,cp1y:1,cp2x:1,cp2y:1,isNew:false} ],
+  'Overshoot': [ {x:0,y:0,cp1x:0,cp1y:0,cp2x:0.3,cp2y:0,isNew:false}, {x:0.7,y:1.2,cp1x:0.5,cp1y:1.2,cp2x:0.85,cp2y:1.2,isNew:true}, {x:1,y:1,cp1x:0.85,cp1y:1,cp2x:1,cp2y:1,isNew:false} ],
+  'Bounce':    [ {x:0,y:0,cp1x:0,cp1y:0,cp2x:0.2,cp2y:0,isNew:false}, {x:0.4,y:1.1,cp1x:0.28,cp1y:1.1,cp2x:0.52,cp2y:1.1,isNew:true}, {x:0.7,y:0.95,cp1x:0.62,cp1y:0.95,cp2x:0.78,cp2y:0.95,isNew:true}, {x:1,y:1,cp1x:0.88,cp1y:1,cp2x:1,cp2y:1,isNew:false} ],
+  'Spring':    [ {x:0,y:0,cp1x:0,cp1y:0,cp2x:0.15,cp2y:0,isNew:false}, {x:0.5,y:1.25,cp1x:0.35,cp1y:1.25,cp2x:0.6,cp2y:1.25,isNew:true}, {x:0.75,y:0.9,cp1x:0.68,cp1y:0.9,cp2x:0.82,cp2y:0.9,isNew:true}, {x:1,y:1,cp1x:0.92,cp1y:1,cp2x:1,cp2y:1,isNew:false} ],
+};
+
+function loadUserPresets() {
+  try { return JSON.parse(localStorage.getItem('cf_presets') || '{}'); } catch(e) { return {}; }
+}
+function saveUserPresets(p) { localStorage.setItem('cf_presets', JSON.stringify(p)); }
+
+// ---- Coordinate conversion ----
+function toScreen(nx, ny) {
+  const drawW = canvas.width - PAD*2, drawH = canvas.height - PAD*2;
+  return { x: PAD + nx * drawW, y: PAD + ny * drawH };
+}
+function toNorm(sx, sy) {
+  const drawW = canvas.width - PAD*2, drawH = canvas.height - PAD*2;
+  return { x: (sx - PAD) / drawW, y: (sy - PAD) / drawH };
+}
+function getMousePos(e) {
+  const rect = canvas.getBoundingClientRect();
+  return { x: (e.clientX - rect.left) * (canvas.width / rect.width), y: (e.clientY - rect.top) * (canvas.height / rect.height) };
+}
+function dist(x1,y1,x2,y2) { return Math.sqrt((x2-x1)**2+(y2-y1)**2); }
+
+// ---- Draw ----
+// ---- Auto grid color based on bg brightness ----
+let gridColorLight = false;
+
+function getBgBrightness() {
+  if (!bgCroppedCanvas) return 0; // gelap = default
+  const sampleCtx = document.createElement('canvas');
+  sampleCtx.width = sampleCtx.height = 10;
+  const sc = sampleCtx.getContext('2d');
+  sc.drawImage(bgCroppedCanvas, 0, 0, 10, 10);
+  const data = sc.getImageData(0, 0, 10, 10).data;
+  let total = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    total += (data[i] * 0.299 + data[i+1] * 0.587 + data[i+2] * 0.114);
+  }
+  return total / (data.length / 4); // 0-255
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#16161c';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Background — center + cover dari cropped canvas (sudah 1:1)
+  if (bgCroppedCanvas) {
+    const cw = canvas.width, ch = canvas.height;
+    const src = bgCroppedCanvas;
+    // Cover: scale supaya memenuhi canvas
+    const scale = Math.max(cw / src.width, ch / src.height);
+    const dw = src.width * scale;
+    const dh = src.height * scale;
+    const dx = (cw - dw) / 2;
+    const dy = (ch - dh) / 2;
+    ctx.globalAlpha = bgOpacity;
+    ctx.drawImage(src, dx, dy, dw, dh);
+    ctx.globalAlpha = 1;
+    // Update grid color berdasarkan brightness
+    gridColorLight = getBgBrightness() * bgOpacity > 60;
+  } else {
+    gridColorLight = false;
+  }
+
+  drawGrid();
+  drawCurve();
+  drawHandles();
+  drawPoints();
+}
+
+function drawGrid() {
+  const hasBg = !!bgCroppedCanvas;
+  const gridColor = gridColorLight
+    ? 'rgba(255,255,255,0.80)'
+    : hasBg ? 'rgba(255,255,255,0.80)' : 'rgba(255,255,255,0.06)';
+  const diagColor = gridColorLight
+    ? 'rgba(255,255,255,0.80)'
+    : hasBg ? 'rgba(255,255,255,0.80)' : 'rgba(255,255,255,0.08)';
+  const labelColor = gridColorLight
+    ? 'rgba(255,255,255,0.80)'
+    : hasBg ? 'rgba(255,255,255,0.80)' : '#444455';
+
+  ctx.strokeStyle = gridColor; ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const t = i / 4;
+    const sx = toScreen(t, 0), sy = toScreen(0, t);
+    ctx.beginPath(); ctx.moveTo(sx.x, PAD); ctx.lineTo(sx.x, canvas.height - PAD); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(PAD, sy.y); ctx.lineTo(canvas.width - PAD, sy.y); ctx.stroke();
+  }
+  // Snap grid dots
+  if (snapEnabled) {
+    ctx.fillStyle = 'rgba(79,142,247,0.4)';
+    for (let gx = 0; gx <= 1.01; gx += SNAP_GRID) {
+      for (let gy = 0; gy <= 1.01; gy += SNAP_GRID) {
+        const sp = toScreen(gx, gy);
+        ctx.beginPath(); ctx.arc(sp.x, sp.y, 1.5, 0, Math.PI*2); ctx.fill();
+      }
+    }
+  }
+  // Diagonal reference
+  ctx.strokeStyle = diagColor; ctx.setLineDash([3,4]);
+  ctx.beginPath();
+  const s0 = toScreen(0,0), s1 = toScreen(1,1);
+  ctx.moveTo(s0.x, s0.y); ctx.lineTo(s1.x, s1.y); ctx.stroke();
+  ctx.setLineDash([]);
+  // Labels
+  ctx.fillStyle = labelColor; ctx.font = '9px sans-serif';
+  ctx.fillText('0', PAD-8, PAD-6);
+  ctx.fillText('1', canvas.width-PAD-2, PAD-6);
+  ctx.fillText('0', PAD-14, PAD+4);
+  ctx.fillText('1', PAD-14, canvas.height-PAD+4);
+}
+
+function drawCurve() {
+  if (points.length < 2) return;
+  ctx.beginPath();
+  const p0s = toScreen(points[0].x, points[0].y);
+  ctx.moveTo(p0s.x, p0s.y);
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0=points[i], p1=points[i+1];
+    const sc2=toScreen(p0.cp2x, p0.cp2y), sc1=toScreen(p1.cp1x, p1.cp1y), s1=toScreen(p1.x, p1.y);
+    ctx.bezierCurveTo(sc2.x,sc2.y, sc1.x,sc1.y, s1.x,s1.y);
+  }
+  ctx.strokeStyle = 'rgba(79,142,247,0.15)'; ctx.lineWidth = 7; ctx.stroke();
+  ctx.strokeStyle = '#4f8ef7'; ctx.lineWidth = 2; ctx.stroke();
+}
+
+function drawHandles() {
+  ctx.strokeStyle = 'rgba(124,92,252,0.5)'; ctx.lineWidth = 1; ctx.setLineDash([2,3]);
+  points.forEach((pt, i) => {
+    const sp = toScreen(pt.x, pt.y);
+    if (i < points.length-1) {
+      const sc2 = toScreen(pt.cp2x, pt.cp2y);
+      ctx.beginPath(); ctx.moveTo(sp.x,sp.y); ctx.lineTo(sc2.x,sc2.y); ctx.stroke();
+      ctx.fillStyle='#7c5cfc'; ctx.beginPath(); ctx.arc(sc2.x,sc2.y,3,0,Math.PI*2); ctx.fill();
+    }
+    if (i > 0) {
+      const sc1 = toScreen(pt.cp1x, pt.cp1y);
+      ctx.beginPath(); ctx.moveTo(sp.x,sp.y); ctx.lineTo(sc1.x,sc1.y); ctx.stroke();
+      ctx.fillStyle='#7c5cfc'; ctx.beginPath(); ctx.arc(sc1.x,sc1.y,3,0,Math.PI*2); ctx.fill();
+    }
+  });
+  ctx.setLineDash([]);
+}
+
+function drawPoints() {
+  points.forEach((pt, i) => {
+    const sp = toScreen(pt.x, pt.y);
+    const isHov = hoveredPoint && hoveredPoint.type==='point' && hoveredPoint.index===i;
+    const isDrag = dragging && dragging.type==='point' && dragging.index===i;
+    const isEnd = i===0 || i===points.length-1;
+    const color = isEnd ? '#4f8ef7' : '#4fcf8a';
+    const r = isHov||isDrag ? 7 : 5;
+    ctx.beginPath(); ctx.arc(sp.x,sp.y,r,0,Math.PI*2);
+    ctx.strokeStyle=color; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.beginPath(); ctx.arc(sp.x,sp.y,r-2.5,0,Math.PI*2);
+    ctx.fillStyle=color; ctx.fill();
+
+    // Show X/Y values
+    if (showVals) {
+      const xv = pt.x.toFixed(2), yv = pt.y.toFixed(2);
+      ctx.fillStyle = '#aaaacc';
+      ctx.font = '9px sans-serif';
+      ctx.fillText(`${xv},${yv}`, sp.x + 8, sp.y - 6);
+    }
+  });
+}
+
+// ---- Hit test ----
+function hitTest(sx, sy) {
+  const R = 11;
+  for (let i = 0; i < points.length; i++) {
+    const pt = points[i];
+    const sp = toScreen(pt.x, pt.y);
+    if (dist(sx,sy,sp.x,sp.y) < R) return { type:'point', index:i };
+    if (i < points.length-1) {
+      const sc2 = toScreen(pt.cp2x, pt.cp2y);
+      if (dist(sx,sy,sc2.x,sc2.y) < R) return { type:'cp2', index:i };
+    }
+    if (i > 0) {
+      const sc1 = toScreen(pt.cp1x, pt.cp1y);
+      if (dist(sx,sy,sc1.x,sc1.y) < R) return { type:'cp1', index:i };
+    }
+  }
+  return null;
+}
+
+// ---- Mouse events ----
+canvas.addEventListener('mousedown', e => {
+  const pos = getMousePos(e);
+  const hit = hitTest(pos.x, pos.y);
+  if (hit) {
+    saveUndoState();
+    resetTensionBase();
+    dragging = hit;
+  }
+});
+
+canvas.addEventListener('mousemove', e => {
+  const pos = getMousePos(e);
+  if (!dragging) { hoveredPoint = hitTest(pos.x, pos.y); draw(); return; }
+  let n = toNorm(pos.x, pos.y);
+  const pt = points[dragging.index];
+  if (dragging.type === 'point') {
+    const isFirst = dragging.index === 0;
+    const isLast  = dragging.index === points.length - 1;
+    if (!isFirst && !isLast) {
+      const minX = points[dragging.index-1].x + 0.01;
+      const maxX = points[dragging.index+1].x - 0.01;
+      const nx = snapVal(Math.max(minX, Math.min(maxX, n.x)));
+      const ny = snapVal(n.y);
+      const dx = nx - pt.x, dy = ny - pt.y;
+      pt.cp1x += dx; pt.cp1y += dy;
+      pt.cp2x += dx; pt.cp2y += dy;
+      pt.x = nx; pt.y = ny;
+    } else {
+      pt.y = snapVal(n.y);
+    }
+  } else if (dragging.type === 'cp2') {
+    pt.cp2x = snapVal(n.x); pt.cp2y = snapVal(n.y);
+  } else if (dragging.type === 'cp1') {
+    pt.cp1x = snapVal(n.x); pt.cp1y = snapVal(n.y);
+  }
+  draw();
+});
+
+canvas.addEventListener('mouseup', () => { dragging = null; });
+canvas.addEventListener('mouseleave', () => { dragging = null; hoveredPoint = null; draw(); });
+
+// ---- Double click: add point ----
+canvas.addEventListener('dblclick', e => {
+  const pos = getMousePos(e);
+  if (hitTest(pos.x, pos.y)) return;
+  let bestSeg=0, bestT=0.5, bestDist=Infinity;
+  for (let i = 0; i < points.length-1; i++) {
+    for (let t = 0; t <= 1; t += 0.02) {
+      const p0=points[i], p1=points[i+1];
+      const bx=bezierVal(p0.x,p0.cp2x,p1.cp1x,p1.x,t);
+      const by=bezierVal(p0.y,p0.cp2y,p1.cp1y,p1.y,t);
+      const sc=toScreen(bx,by);
+      const d=dist(pos.x,pos.y,sc.x,sc.y);
+      if (d<bestDist) { bestDist=d; bestSeg=i; bestT=t; }
+    }
+  }
+  if (bestDist > 20) return;
+  saveUndoState();
+  resetTensionBase();
+  const p0=points[bestSeg], p1=points[bestSeg+1];
+  const nx=bezierVal(p0.x,p0.cp2x,p1.cp1x,p1.x,bestT);
+  const ny=bezierVal(p0.y,p0.cp2y,p1.cp1y,p1.y,bestT);
+  points.splice(bestSeg+1, 0, {
+    x:nx, y:ny,
+    cp1x: nx-(p0.cp2x-p0.x)*0.3, cp1y: ny-(p0.cp2y-p0.y)*0.3,
+    cp2x: nx+(p1.x-p1.cp1x)*0.3, cp2y: ny+(p1.y-p1.cp1y)*0.3,
+    isNew: true
+  });
+  draw();
+});
+
+canvas.addEventListener('contextmenu', e => {
+  e.preventDefault();
+  const pos = getMousePos(e);
+  const hit = hitTest(pos.x, pos.y);
+  if (hit && hit.type==='point' && hit.index > 0 && hit.index < points.length-1) {
+    saveUndoState();
+    points.splice(hit.index, 1);
+    resetTensionBase();
+    draw();
+  }
+});
+
+function bezierVal(p0,p1,p2,p3,t) {
+  const mt=1-t;
+  return mt*mt*mt*p0 + 3*mt*mt*t*p1 + 3*mt*t*t*p2 + t*t*t*p3;
+}
+
+// ---- Presets ----
+function renderPresets() {
+  const grid = document.getElementById('presetsGrid');
+  grid.innerHTML = '';
+  const all = { ...builtinPresets, ...loadUserPresets() };
+  Object.entries(all).forEach(([name, pts]) => {
+    const btn = document.createElement('div');
+    btn.className = 'preset-btn' + (name===selectedPreset?' active':'');
+    const mc = document.createElement('canvas');
+    mc.className = 'preset-mini-canvas';
+    mc.width=80; mc.height=28;
+    drawMiniCurve(mc, pts);
+    btn.appendChild(mc);
+    btn.appendChild(document.createTextNode(name));
+    btn.onclick = () => {
+      saveUndoState();
+      points = JSON.parse(JSON.stringify(pts));
+      selectedPreset = name;
+      resetTensionBase();
+      renderPresets();
+      draw();
+    };
+    grid.appendChild(btn);
+  });
+}
+
+function drawMiniCurve(mc, pts) {
+  const c=mc.getContext('2d');
+  const W=mc.width, H=mc.height, P=4;
+  c.clearRect(0,0,W,H);
+  if (!pts||pts.length<2) return;
+  const tx=x=>P+x*(W-P*2);
+  const ty=y=>P+y*(H-P*2);
+  c.beginPath();
+  c.moveTo(tx(pts[0].x),ty(pts[0].y));
+  for (let i=0;i<pts.length-1;i++) {
+    const p0=pts[i],p1=pts[i+1];
+    c.bezierCurveTo(tx(p0.cp2x),ty(p0.cp2y),tx(p1.cp1x),ty(p1.cp1y),tx(p1.x),ty(p1.y));
+  }
+  c.strokeStyle='#4f8ef7'; c.lineWidth=1.5; c.stroke();
+}
+
+function saveCurrentPreset() {
+  const name = document.getElementById('presetName').value.trim();
+  if (!name) { showToast('Enter a preset name','error'); return; }
+  const up = loadUserPresets();
+  up[name] = JSON.parse(JSON.stringify(points));
+  saveUserPresets(up);
+  selectedPreset = name;
+  renderPresets();
+  document.getElementById('presetName').value='';
+  showToast(`Saved "${name}"`, 'success');
+}
+
+function renameSelectedPreset() {
+  if (!selectedPreset || builtinPresets[selectedPreset]) {
+    showToast('Select a user preset to rename', 'error'); return;
+  }
+  const newName = document.getElementById('presetName').value.trim();
+  if (!newName) { showToast('Enter a new name first', 'error'); return; }
+  if (newName === selectedPreset) { showToast('Name is the same', 'error'); return; }
+  const up = loadUserPresets();
+  if (!up[selectedPreset]) { showToast('Preset not found', 'error'); return; }
+  up[newName] = up[selectedPreset];
+  delete up[selectedPreset];
+  saveUserPresets(up);
+  selectedPreset = newName;
+  renderPresets();
+  document.getElementById('presetName').value = '';
+  showToast(`Renamed to "${newName}"`, 'success');
+}
+
+function deleteSelectedPreset() {
+  if (!selectedPreset||builtinPresets[selectedPreset]) { showToast('Select a user preset to delete','error'); return; }
+  const up = loadUserPresets();
+  delete up[selectedPreset];
+  saveUserPresets(up);
+  selectedPreset = null;
+  renderPresets();
+  showToast('Preset deleted','success');
+}
+
+function exportPresets() {
+  const up = loadUserPresets();
+  if (!Object.keys(up).length) { showToast('No user presets to export','error'); return; }
+  const blob = new Blob([JSON.stringify({version:'1.0',app:'CurveFlow',presets:up},null,2)],{type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download='curveflow-presets.json';
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+  showToast(`Exported ${Object.keys(up).length} preset(s)`,'success');
+}
+
+function importPresetsClick() { document.getElementById('importFileInput').click(); }
+
+// Konversi format Flow [x1,y1,x2,y2] ke format CurveFlow points array
+function flowValueToPoints(v) {
+  var x1=v[0], y1=v[1], x2=v[2], y2=v[3];
+  return [
+    {x:0, y:0, cp1x:0, cp1y:0, cp2x:x1, cp2y:y1, isNew:false},
+    {x:1, y:1, cp1x:x2, cp1y:y2, cp2x:1, cp2y:1, isNew:false}
+  ];
+}
+
+function importPresets(event) {
+  const file=event.target.files[0]; if (!file) return;
+  const reader=new FileReader();
+  const isFlow = file.name.endsWith('.flow');
+  reader.onload=e=>{
+    try {
+      const data=JSON.parse(e.target.result);
+      const up=loadUserPresets(); let count=0;
+      if (isFlow && Array.isArray(data)) {
+        // Format Flow: [{name, value:[x1,y1,x2,y2]}, ...]
+        data.forEach(item=>{
+          if (!item.name || !Array.isArray(item.value) || item.value.length < 4) return;
+          let fn = item.name;
+          if (up[fn]) fn = item.name + '_flow';
+          up[fn] = flowValueToPoints(item.value);
+          count++;
+        });
+      } else {
+        // Format CurveFlow JSON
+        const incoming=data.presets||data;
+        Object.keys(incoming).forEach(name=>{
+          if (!Array.isArray(incoming[name])) return;
+          let fn=name; if (up[fn]) fn=name+'_imported';
+          up[fn]=incoming[name]; count++;
+        });
+      }
+      saveUserPresets(up); renderPresets();
+      showToast(`Imported ${count} preset(s)`,'success');
+    } catch(err){ showToast('Failed to read file','error'); }
+  };
+  reader.readAsText(file); event.target.value='';
+}
+
+function resetCurve() {
+  saveUndoState();
+  points = getDefaultPoints();
+  selectedPreset = null;
+  resetTensionBase();
+  renderPresets();
+  draw();
+}
+
+// ---- Apply to AE ----
+function curveIsOutOfBounds() {
+  for (const pt of points) {
+    if (pt.y < 0 || pt.y > 1) return true;
+    if (pt.cp1y < 0 || pt.cp1y > 1) return true;
+    if (pt.cp2y < 0 || pt.cp2y > 1) return true;
+  }
+  return false;
+}
+
+function doApply(separateDimensions) {
+  const json = JSON.stringify({ points: points.map(p=>({...p})), separateDimensions: !!separateDimensions });
+  const escaped = json.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  csInterface.evalScript('getSelectedKeyframesInfo()', function(infoResult) {
+    let modeMsg = 'Applied!';
+    try {
+      const info=JSON.parse(infoResult);
+      const K=info.keyCount||0, N=points.length;
+      if (N===K)      modeMsg=`Applied — redistributed ${K} keyframes`;
+      else if (N<K)   modeMsg=`Applied — per segment (${K-1} segments)`;
+      else            modeMsg=`Applied — added ${N-K} new keyframe(s)`;
+    } catch(e){}
+    csInterface.evalScript(`applyCurve('${escaped}')`, function(result) {
+      try {
+        const res = JSON.parse(result);
+        if (res.success) {
+          showToast(modeMsg, 'success');
+          setStatus(true, 'Applied');
+        } else {
+          showToast(res.error || 'Error', 'error');
+        }
+      } catch(e) { showToast('Applied!', 'success'); }
+    });
+  });
+}
+
+function applyToAE() {
+  if (typeof csInterface === 'undefined') {
+    showToast(`Preview mode — ${points.length} points`, 'success');
+    return;
+  }
+  if (curveIsOutOfBounds()) {
+    csInterface.evalScript('checkSelectedAreSeparated()', function(result) {
+      try {
+        var res = JSON.parse(result);
+        if (res.separated) {
+          doApply(false);
+        } else {
+          showSeparateConfirm();
+        }
+      } catch(e) {
+        showSeparateConfirm();
+      }
+    });
+  } else {
+    doApply(false);
+  }
+}
+
+function showSeparateConfirm() {
+  document.getElementById('separateModal').style.display = 'flex';
+}
+function closeSeparateConfirm() {
+  document.getElementById('separateModal').style.display = 'none';
+}
+function onSeparateYes() {
+  closeSeparateConfirm();
+  doApply(true);
+}
+function onSeparateNo() {
+  closeSeparateConfirm();
+}
+
+
+function debugApply() {
+  if (typeof csInterface === 'undefined') { showToast('Dev mode only', 'error'); return; }
+  const json = JSON.stringify({ points: points.map(p=>({...p})), debugMode: true });
+  const escaped = json.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  csInterface.evalScript(`applyCurve('${escaped}')`, function(result) {
+    try {
+      const res = JSON.parse(result);
+      if (res.debug) {
+        // Tampilkan di alert AE biar bisa dibaca penuh
+        csInterface.evalScript('alert("' + res.debug.replace(/"/g,'\\"') + '")', function(){});
+      } else {
+        showToast(res.error || 'No debug info', 'error');
+      }
+    } catch(e) { showToast('Debug error', 'error'); }
+  });
+}
+
+
+function setStatus(active, text) {
+  document.getElementById('statusDot').className='status-dot'+(active?' active':'');
+  document.getElementById('statusText').textContent=text||'Ready';
+}
+
+function showAbout() {
+  const m = document.getElementById('aboutModal');
+  m.style.display = 'flex';
+}
+function closeAbout() {
+  document.getElementById('aboutModal').style.display = 'none';
+}
+document.getElementById('aboutModal').addEventListener('click', function(e) {
+  if (e.target === this) closeAbout();
+});
+
+let toastTimer;
+function showToast(msg, type) {
+  const el=document.getElementById('toast');
+  el.textContent=msg;
+  el.className='toast show'+(type?' '+type:'');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>{ el.className='toast'; }, 2500);
+}
+
+function init() {
+  updateLayout();
+  // Paksa canvas resize setelah layout render
+  setTimeout(() => { setCanvasSize(); draw(); }, 50);
+  draw();
+  renderPresets();
+  updateUndoButtons();
+  try {
+    csInterface = new CSInterface();
+    setStatus(true,'Connected');
+  } catch(e) {
+    setStatus(false,'Dev mode');
+  }
+
+  // Load background setelah csInterface ready — delay supaya JSX sudah ter-load
+  setTimeout(function() {
+    loadBgPersistent(function(fileUrl, isGif, cropInfo) {
+      if (!fileUrl) return;
+      document.getElementById('clearBgBtn').style.display = '';
+      if (isGif) {
+        // GIF: load dari file:/// dengan CSS crop pakai fraksi
+        const cp = (cropInfo || '0|0|1|1').split('|');
+        const cL  = parseFloat(cp[0]) || 0;
+        const cT  = parseFloat(cp[1]) || 0;
+        const cFW = parseFloat(cp[2]) || 1;
+        const cFH = parseFloat(cp[3]) || 1;
+        if (bgGifEl) { bgGifEl.remove(); bgGifEl = null; }
+        bgGifEl = applyGifCrop(fileUrl, cL, cT, cFW, cFH);
+        container.appendChild(bgGifEl);
+      } else {
+        // JPG: load ke canvas
+        const img = new Image();
+        img.onload = () => {
+          const offscreen = document.createElement('canvas');
+          offscreen.width = img.naturalWidth;
+          offscreen.height = img.naturalHeight;
+          offscreen.getContext('2d').drawImage(img, 0, 0);
+          bgCroppedCanvas = offscreen;
+          draw();
+        };
+        img.onerror = () => console.log('BG load error:', fileUrl);
+        img.src = fileUrl;
+      }
+    });
+  }, 1000);
+}
+
+window.addEventListener('load', init);
+</script>
+<script src="./js/CSInterface.js" onerror="console.log('CSInterface not available')"></script>
+</body>
+</html>
