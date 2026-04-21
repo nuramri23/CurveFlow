@@ -581,7 +581,12 @@ function updateLayout() {
 
   mainLayout.classList.toggle('wide', isWide);
 
-  // 🔥 INI BAGIAN UTAMA
+  // Reset rightPanel inline width saat kembali ke portrait
+  if (!isWide) {
+    rightPanel.style.width = '';
+    rightPanel.style.maxWidth = '';
+  }
+
   PAD = isWide ? 85 : 40;
 
   setCanvasSize();

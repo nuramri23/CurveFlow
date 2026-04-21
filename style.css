@@ -148,13 +148,10 @@
 
   /* Preset grid: kolom dikontrol JS */
   .presets-grid {
-  display: grid;
-  gap: 4px;
-  margin-bottom: 2px;
-
-  grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
-  width: 100%;
-}
+    display: grid;
+    gap: 4px;
+    margin-bottom: 2px;
+  }
 
   /* canvas */
   .canvas-label {
