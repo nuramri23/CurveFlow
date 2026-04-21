@@ -9,7 +9,7 @@ Curve editor extension untuk After Effects, terinspirasi dari Flow dan wavy 3am.
 - **Snap to grid** — snap ke kelipatan 25%
 - **Tampilkan nilai X/Y** di setiap titik
 - **Tension slider** — sesuaikan keketatan kurva
-- **Undo/Redo** 
+- **Undo/Redo**
 - **Background image/GIF** — upload gambar sebagai referensi di canvas, dengan crop 1:1
 - **Preset** — built-in (Linear, Ease, Ease In, Ease Out, Overshoot, Bounce, Spring) + custom
 - **Import preset dari Flow** — format `.flow` bisa dikonversi
