@@ -79,7 +79,9 @@
   /* Mode sempit: di bawah canvas, flex untuk isi sisa */
   .right-panel {
     flex: 1;
+    min-width: 0;
     min-height: 0;
+    max-height: 100%;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -128,6 +130,7 @@
   }
   .presets-scroll {
     flex: 1;
+     min-width: 0;
     overflow-y: auto;
     padding: 5px 6px;
     min-height: 0;
@@ -145,10 +148,13 @@
 
   /* Preset grid: kolom dikontrol JS */
   .presets-grid {
-    display: grid;
-    gap: 4px;
-    margin-bottom: 2px;
-  }
+  display: grid;
+  gap: 4px;
+  margin-bottom: 2px;
+
+  grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+  width: 100%;
+}
 
   /* canvas */
   .canvas-label {
@@ -279,6 +285,7 @@
     text-align: center;
     transition: all 0.15s;
     line-height: 1.3;
+    width: 100%;
   }
   .preset-btn:hover { border-color: var(--accent); color: var(--text); background: var(--surface2); }
   .preset-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(79,142,247,0.1); }
@@ -598,3 +605,75 @@
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   .toast.success { border-color: var(--success); color: var(--success); }
   .toast.error { border-color: var(--danger); color: var(--danger); }
+
+  /* ===== ICON BUTTONS ===== */
+  .btn-icon {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    width: 28px; height: 28px;
+    color: var(--text-dim);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .btn-icon:hover { color: var(--accent); border-color: var(--accent); }
+  .btn-icon:disabled { opacity: 0.3; cursor: default; }
+  .btn-icon:disabled:hover { color: var(--text-dim); border-color: var(--border); }
+
+  .btn-icon-sm {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    width: 22px; height: 22px;
+    color: var(--text-dim);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .btn-icon-sm:hover { color: var(--text); border-color: var(--border); background: var(--surface2); }
+  .btn-icon-sm.danger:hover { color: var(--danger); border-color: var(--danger); }
+
+  /* ===== PRESET TOOLBAR ===== */
+  .preset-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 7px 4px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  /* ===== ACTION ROW (icons + apply) ===== */
+  .action-row {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+  }
+  .btn-apply {
+    flex: 1;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none;
+    border-radius: 6px;
+    padding: 7px 10px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    transition: opacity 0.15s, transform 0.1s;
+    height: 28px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .btn-apply:hover { opacity: 0.9; }
+  .btn-apply:active { transform: scale(0.98); }
+
+  /* ===== CUSTOM SCROLLBAR ===== */
+  .presets-scroll::-webkit-scrollbar { width: 4px; }
+  .presets-scroll::-webkit-scrollbar-track { background: transparent; }
+  .presets-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .presets-scroll::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }

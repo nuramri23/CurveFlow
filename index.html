@@ -65,14 +65,11 @@
         <input type="range" class="tension-slider" id="tensionSlider" min="-100" max="100" value="0" oninput="onTensionChange(this.value)">
         <span class="tension-val" id="tensionVal">0</span>
       </div>
-      <div class="undo-row">
-        <button class="btn-undo" id="undoBtn" onclick="undo()" disabled>↩ Undo</button>
-        <button class="btn-undo" id="redoBtn" onclick="redo()" disabled>↪ Redo</button>
-      </div>
       <div class="action-row">
-        <button class="btn-reset" onclick="resetCurve()">Reset</button>
-        <button class="btn-apply" onclick="applyToAE()">Apply to Keyframes</button>
-        <button class="btn-reset" onclick="debugApply()" title="Debug: lihat nilai ease" style="font-size:9px;padding:8px 6px;">DBG</button>
+        <button class="btn-icon" id="undoBtn" onclick="undo()" disabled title="Undo">↩</button>
+        <button class="btn-icon" id="redoBtn" onclick="redo()" disabled title="Redo">↪</button>
+        <button class="btn-icon" onclick="resetCurve()" title="Reset curve">↺</button>
+        <button class="btn-apply" onclick="applyToAE()">Apply</button>
       </div>
     </div>
 
@@ -82,26 +79,36 @@
   <div class="splitter-h" id="splitterH"><div class="splitter-bar-h"></div></div>
 
   <!-- RIGHT PANEL: hanya preset yang scroll -->
-  <div class="right-panel">
-    <div class="right-panel-title">Presets</div>
-    <div class="presets-scroll">
-      <div class="presets-grid" id="presetsGrid"></div>
-    </div>
-    <div class="preset-save-area">
-      <input class="preset-input" id="presetName" placeholder="Preset name…" />
-      <div style="display:flex;gap:4px;">
-        <button class="btn-sm" style="flex:1" onclick="saveCurrentPreset()">Save</button>
-        <button class="btn-sm" onclick="renameSelectedPreset()" title="Rename selected preset">✏</button>
-        <button class="btn-sm" style="color:var(--danger)" onclick="deleteSelectedPreset()">Del</button>
-      </div>
-      <div style="display:flex;gap:4px;">
-        <button class="btn-sm" style="flex:1;font-size:10px;" onclick="exportPresets()">⬇ Export</button>
-        <button class="btn-sm" style="flex:1;font-size:10px;" onclick="importPresetsClick()">⬆ Import</button>
+  <div class="right-panel" style="position: relative;">
+    <div class="preset-toolbar">
+      <span style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.08em;">Presets</span>
+      <div style="display:flex;gap:3px;">
+        <button class="btn-icon-sm" onclick="savePresetPrompt()" title="Save preset">＋</button>
+        <button class="btn-icon-sm" onclick="renamePresetPrompt()" title="Rename preset">✏</button>
+        <button class="btn-icon-sm danger" onclick="deleteSelectedPreset()" title="Delete preset">🗑</button>
+        <button class="btn-icon-sm" onclick="exportPresets()" title="Export presets">⬇</button>
+        <button class="btn-icon-sm" onclick="importPresetsClick()" title="Import presets">⬆</button>
         <input type="file" id="importFileInput" accept=".json,.flow" style="display:none" onchange="importPresets(event)"/>
       </div>
     </div>
+    <div class="presets-scroll">
+      <div class="presets-grid" id="presetsGrid"></div>
+    </div>
   </div>
 
+</div>
+
+<!-- PRESET NAME POPUP -->
+<div id="presetPopup" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:300;align-items:center;justify-content:center;">
+  <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px 18px;width:200px;">
+    <div id="presetPopupTitle" style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:10px;">Save Preset</div>
+    <input id="presetPopupInput" class="preset-input" placeholder="Preset name…" style="width:100%;margin-bottom:10px;"
+      onkeydown="if(event.key==='Enter')confirmPresetPopup();if(event.key==='Escape')closePresetPopup();"/>
+    <div style="display:flex;gap:6px;">
+      <button onclick="closePresetPopup()" style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px;color:var(--text-dim);font-size:11px;cursor:pointer;">Cancel</button>
+      <button onclick="confirmPresetPopup()" style="flex:1;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:6px;padding:6px;color:#fff;font-size:11px;font-weight:600;cursor:pointer;">OK</button>
+    </div>
+  </div>
 </div>
 
 <div class="crop-modal" id="cropModal">
@@ -144,7 +151,7 @@ const ctx     = canvas.getContext('2d');
 const container    = document.getElementById('canvasContainer');
 const mainLayout   = document.getElementById('mainLayout');
 const canvasSection= document.getElementById('canvasSection');
-const PAD = 36;
+let PAD = 36;
 const WIDE_THRESHOLD = 480;
 
 // ---- Feature flags ----
@@ -254,11 +261,8 @@ function confirmCrop() {
   document.getElementById('clearBgBtn').style.display = '';
 
   if (cropIsGif) {
-    // GIF: tampilkan animasi via overlay, simpan frame pertama sebagai JPEG
     const img = document.getElementById('cropImg');
     const gifSrc = img.src;
-
-    // Simpan crop sebagai fraksi (0-1) dari dimensi gambar
     const gifCropL  = cropX / cropDispW;
     const gifCropT  = cropY / cropDispH;
     const gifCropFW = cropSize / cropDispW;
@@ -267,16 +271,9 @@ function confirmCrop() {
     if (bgCroppedCanvas) bgCroppedCanvas = null;
     bgGifEl = applyGifCrop(gifSrc, gifCropL, gifCropT, gifCropFW, gifCropFH);
     container.appendChild(bgGifEl);
-
-    if (cropGifFilePath && csInterface) {
-      const safePath = cropGifFilePath.replace(/\\/g, '/');
-      const cropInfo = gifCropPx + '|' + gifCropPy + '|' + gifCropScale;
-      csInterface.evalScript('copyBgGifFromPath("' + safePath + '","' + cropInfo + '")', function(r) {
-        console.log('GIF copy result:', r);
-      });
-    } else {
-      try { saveBgPersistent(gifSrc, true); } catch(e) {}
-    }
+    // Simpan src (dataURL) + crop ke localStorage supaya bisa reload animated
+    const cropInfo = gifCropL + '|' + gifCropT + '|' + gifCropFW + '|' + gifCropFH;
+    try { localStorage.setItem('cf_bg', JSON.stringify({ type:'gif', src: gifSrc, crop: cropInfo })); } catch(e) {}
   } else {
     const offscreen = document.createElement('canvas');
     offscreen.width = offscreen.height = Math.round(srcSize);
@@ -293,7 +290,10 @@ function confirmCrop() {
       quality -= 0.05;
       imgData = offscreen.toDataURL('image/jpeg', quality);
     }
-    try { saveBgPersistent(imgData); } catch(e) {}
+    try {
+      localStorage.setItem('cf_bg', JSON.stringify({ type:'jpg', src: imgData }));
+      saveBgPersistent(imgData);
+    } catch(e) {}
   }
 
   closeCropModal();
@@ -343,6 +343,7 @@ function clearBgImage() {
   bgCroppedCanvas = null;
   if (bgGifEl) { bgGifEl.remove(); bgGifEl = null; }
   document.getElementById('clearBgBtn').style.display = 'none';
+  try { localStorage.removeItem('cf_bg'); } catch(e) {}
   try { clearBgPersistent(); } catch(e) {}
   draw();
 }
@@ -418,15 +419,29 @@ function saveBgGifChunked(dataUrl) {
 }
 
 function loadBgPersistent(callback) {
+  // Load dari localStorage dulu (lebih reliable, support animated GIF)
+  try {
+    const saved = localStorage.getItem('cf_bg');
+    if (saved) {
+      const data = JSON.parse(saved);
+      if (data.type === 'gif') {
+        callback(data.src, true, data.crop || '0|0|1|1');
+        return;
+      } else if (data.type === 'jpg' && data.src) {
+        callback(data.src, false, '');
+        return;
+      }
+    }
+  } catch(e) {}
+  // Fallback ke JSX file storage
   if (!csInterface) return;
   csInterface.evalScript('loadBgFromFile()', function(result) {
     if (!result || result === 'undefined' || result.length < 3) return;
     try {
-      // Format: path||isGif||cropPx|cropPy|cropScale
       const parts = result.split('||');
       const filePath = parts[0];
       const isGif = parts[1] === '1';
-      const cropInfo = parts[2] || '0|0|100';
+      const cropInfo = parts[2] || '0|0|1|1';
       const fileUrl = 'file:///' + filePath.replace(/\\/g, '/');
       callback(fileUrl, isGif, cropInfo);
     } catch(e) { console.log('load error:', e); }
@@ -550,21 +565,27 @@ function resetTensionBase() {
 }
 
 // ---- Responsive layout ----
-const PRESET_CARD_MIN = 75; // px minimum per card sebelum tambah kolom
+const PRESET_CARD_MIN = 75;
 
 function updatePresetColumns() {
   const grid = document.getElementById('presetsGrid');
   if (!grid) return;
-  const panelW = grid.parentElement.clientWidth - 12; // minus padding
+  const panelW = grid.parentElement.clientWidth - 12;
   const cols = Math.max(1, Math.floor(panelW / PRESET_CARD_MIN));
   grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
 }
 
 function updateLayout() {
   const w = document.body.clientWidth;
-  mainLayout.classList.toggle('wide', w >= WIDE_THRESHOLD);
+  const isWide = w >= WIDE_THRESHOLD;
+
+  mainLayout.classList.toggle('wide', isWide);
+
+  // 🔥 INI BAGIAN UTAMA
+  PAD = isWide ? 85 : 40;
+
   setCanvasSize();
-  updatePresetColumns();
+  requestAnimationFrame(updatePresetColumns);
 }
 
 function setCanvasSize() {
@@ -585,6 +606,9 @@ const ro = new ResizeObserver(() => {
   });
 });
 ro.observe(document.body);
+
+// Observe preset scroll container langsung supaya kolom update akurat
+const roPreset = new ResizeObserver(() => { updatePresetColumns(); });
 
 // ---- Splitter drag ----
 const splitterV = document.getElementById('splitterV');
@@ -645,6 +669,7 @@ document.addEventListener('mouseup', () => {
 let dragging = null;
 let hoveredPoint = null;
 let selectedPreset = null;
+let warnedOvershoot = false;
 
 // ---- Built-in presets ----
 const builtinPresets = {
@@ -665,11 +690,11 @@ function saveUserPresets(p) { localStorage.setItem('cf_presets', JSON.stringify(
 // ---- Coordinate conversion ----
 function toScreen(nx, ny) {
   const drawW = canvas.width - PAD*2, drawH = canvas.height - PAD*2;
-  return { x: PAD + nx * drawW, y: PAD + ny * drawH };
+  return { x: PAD + nx * drawW, y: PAD + (1 - ny) * drawH };
 }
 function toNorm(sx, sy) {
   const drawW = canvas.width - PAD*2, drawH = canvas.height - PAD*2;
-  return { x: (sx - PAD) / drawW, y: (sy - PAD) / drawH };
+  return { x: (sx - PAD) / drawW, y: 1 - (sy - PAD) / drawH };
 }
 function getMousePos(e) {
   const rect = canvas.getBoundingClientRect();
@@ -762,10 +787,10 @@ function drawGrid() {
   ctx.setLineDash([]);
   // Labels
   ctx.fillStyle = labelColor; ctx.font = '9px sans-serif';
-  ctx.fillText('0', PAD-8, PAD-6);
-  ctx.fillText('1', canvas.width-PAD-2, PAD-6);
-  ctx.fillText('0', PAD-14, PAD+4);
-  ctx.fillText('1', PAD-14, canvas.height-PAD+4);
+  ctx.fillText('0', PAD-8, canvas.height-PAD+12);
+  ctx.fillText('1', canvas.width-PAD-2, canvas.height-PAD+12);
+  ctx.fillText('1', PAD-14, PAD+4);
+  ctx.fillText('0', PAD-14, canvas.height-PAD+4);
 }
 
 function drawCurve() {
@@ -850,6 +875,7 @@ canvas.addEventListener('mousedown', e => {
     saveUndoState();
     resetTensionBase();
     dragging = hit;
+    warnedOvershoot = false;
   }
 });
 
@@ -963,7 +989,7 @@ function drawMiniCurve(mc, pts) {
   c.clearRect(0,0,W,H);
   if (!pts||pts.length<2) return;
   const tx=x=>P+x*(W-P*2);
-  const ty=y=>P+y*(H-P*2);
+  const ty=y=>P+(1-y)*(H-P*2);
   c.beginPath();
   c.moveTo(tx(pts[0].x),ty(pts[0].y));
   for (let i=0;i<pts.length-1;i++) {
@@ -1088,6 +1114,18 @@ function curveIsOutOfBounds() {
   return false;
 }
 
+function hasOvershootTwoPoint() {
+  if (points.length !== 2) return false;
+
+  const p0 = points[0];
+  const p1 = points[1];
+
+  return (
+    p0.cp2y < 0 || p0.cp2y > 1 ||
+    p1.cp1y < 0 || p1.cp1y > 1
+  );
+}
+
 function doApply(separateDimensions) {
   const json = JSON.stringify({ points: points.map(p=>({...p})), separateDimensions: !!separateDimensions });
   const escaped = json.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
@@ -1119,6 +1157,11 @@ function applyToAE() {
     showToast(`Preview mode — ${points.length} points`, 'success');
     return;
   }
+
+  if (points.length === 2 && hasOvershootTwoPoint()) {
+    showToast('Overshoot with 2 keyframes may look stiff', 'warn');
+  }
+
   if (curveIsOutOfBounds()) {
     csInterface.evalScript('checkSelectedAreSeparated()', function(result) {
       try {
@@ -1152,23 +1195,55 @@ function onSeparateNo() {
 }
 
 
-function debugApply() {
-  if (typeof csInterface === 'undefined') { showToast('Dev mode only', 'error'); return; }
-  const json = JSON.stringify({ points: points.map(p=>({...p})), debugMode: true });
-  const escaped = json.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-  csInterface.evalScript(`applyCurve('${escaped}')`, function(result) {
-    try {
-      const res = JSON.parse(result);
-      if (res.debug) {
-        // Tampilkan di alert AE biar bisa dibaca penuh
-        csInterface.evalScript('alert("' + res.debug.replace(/"/g,'\\"') + '")', function(){});
-      } else {
-        showToast(res.error || 'No debug info', 'error');
-      }
-    } catch(e) { showToast('Debug error', 'error'); }
-  });
+let presetPopupMode = 'save'; // 'save' or 'rename'
+
+function savePresetPrompt() {
+  presetPopupMode = 'save';
+  document.getElementById('presetPopupTitle').textContent = 'Save Preset';
+  document.getElementById('presetPopupInput').value = selectedPreset && !builtinPresets[selectedPreset] ? selectedPreset : '';
+  document.getElementById('presetPopup').style.display = 'flex';
+  setTimeout(() => document.getElementById('presetPopupInput').focus(), 50);
 }
 
+function renamePresetPrompt() {
+  if (!selectedPreset || builtinPresets[selectedPreset]) { showToast('Select a user preset to rename', 'error'); return; }
+  presetPopupMode = 'rename';
+  document.getElementById('presetPopupTitle').textContent = 'Rename Preset';
+  document.getElementById('presetPopupInput').value = selectedPreset;
+  document.getElementById('presetPopup').style.display = 'flex';
+  setTimeout(() => document.getElementById('presetPopupInput').focus(), 50);
+}
+
+function closePresetPopup() {
+  document.getElementById('presetPopup').style.display = 'none';
+}
+
+function confirmPresetPopup() {
+  const name = document.getElementById('presetPopupInput').value.trim();
+  if (!name) { showToast('Enter a name', 'error'); return; }
+  closePresetPopup();
+  if (presetPopupMode === 'save') {
+    const up = loadUserPresets();
+    up[name] = JSON.parse(JSON.stringify(points));
+    saveUserPresets(up);
+    selectedPreset = name;
+    renderPresets();
+    showToast(`Saved "${name}"`, 'success');
+  } else {
+    const up = loadUserPresets();
+    if (!up[selectedPreset]) { showToast('Preset not found', 'error'); return; }
+    up[name] = up[selectedPreset];
+    delete up[selectedPreset];
+    saveUserPresets(up);
+    selectedPreset = name;
+    renderPresets();
+    showToast(`Renamed to "${name}"`, 'success');
+  }
+}
+
+document.getElementById('presetPopup').addEventListener('click', function(e) {
+  if (e.target === this) closePresetPopup();
+});
 
 function setStatus(active, text) {
   document.getElementById('statusDot').className='status-dot'+(active?' active':'');
@@ -1197,11 +1272,13 @@ function showToast(msg, type) {
 
 function init() {
   updateLayout();
-  // Paksa canvas resize setelah layout render
   setTimeout(() => { setCanvasSize(); draw(); }, 50);
   draw();
   renderPresets();
   updateUndoButtons();
+  // Observe preset scroll container untuk update kolom otomatis
+  const presetsScroll = document.querySelector('.presets-scroll');
+  if (presetsScroll) roPreset.observe(presetsScroll);
   try {
     csInterface = new CSInterface();
     setStatus(true,'Connected');

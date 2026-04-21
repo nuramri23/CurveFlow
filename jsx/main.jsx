@@ -398,7 +398,7 @@ function getEaseAtT(points, t, valueDiff, duration) {
     if (!valueDiff || valueDiff <= 0) valueDiff = 1;
     if (!duration  || duration  <= 0) duration  = 1;
 
-    // OUT ease: cp2 dari titik START segment berikutnya
+    // OUT ease: cp2 dari titik START segment
     var outInfluence = 33, outSpeed = 0;
     for (var i = 0; i < points.length - 1; i++) {
         if (Math.abs(points[i].x - t) < TEPS) {
@@ -409,11 +409,9 @@ function getEaseAtT(points, t, valueDiff, duration) {
                 var ody = p0.cp2y - p0.y;
                 outInfluence = Math.abs(odx) / segDur * 100;
                 if (Math.abs(odx) > 0.001) {
-                    // slope normalized → konversi ke unit/detik
                     outSpeed = Math.abs(ody / odx) * (valueDiff / duration);
                 } else {
-                    // handle vertikal (dx≈0) = slope sangat besar
-                    // pakai epsilon kecil supaya speed proporsional dengan ody
+                    // handle vertikal: slope sangat besar
                     outSpeed = Math.abs(ody) / 0.001 * (valueDiff / duration);
                 }
             }
@@ -428,12 +426,13 @@ function getEaseAtT(points, t, valueDiff, duration) {
             var p0 = points[j], p1 = points[j + 1];
             var segDur = p1.x - p0.x;
             if (segDur > TEPS) {
-                var idx = p1.cp1x - p1.x;
-                var idy = p1.cp1y - p1.y;
+                var idx = p1.x - p1.cp1x;
+                var idy = p1.y - p1.cp1y;
                 inInfluence = Math.abs(idx) / segDur * 100;
                 if (Math.abs(idx) > 0.001) {
                     inSpeed = Math.abs(idy / idx) * (valueDiff / duration);
                 } else {
+                    // handle vertikal: slope sangat besar
                     inSpeed = Math.abs(idy) / 0.001 * (valueDiff / duration);
                 }
             }
