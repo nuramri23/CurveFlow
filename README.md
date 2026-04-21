@@ -1,6 +1,6 @@
 # CurveFlow by anggimv_
 
-Curve editor extension untuk After Effects, terinspirasi dari Flow.
+Curve editor extension untuk After Effects, terinspirasi dari Flow dan wavy 3am.
 
 ## Fitur
 - **Curve editor** — drag titik & handle untuk ubah easing
