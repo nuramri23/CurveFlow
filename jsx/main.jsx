@@ -157,21 +157,23 @@ function processPropertyDebug(prop, points) {
         var duration  = endTime - startTime;
         var startVal  = prop.keyValue(selKeys[0]);
         var endVal    = prop.keyValue(selKeys[selKeys.length-1]);
-        var valueDiff = 0;
+        var absValDiff = 0;
         if (typeof startVal === 'number') {
-            valueDiff = Math.abs(endVal - startVal);
+            absValDiff = Math.abs(endVal - startVal);
         } else if (startVal.length) {
+            var maxAbs = 0;
             for (var d = 0; d < startVal.length; d++) {
                 var dv = Math.abs(endVal[d] - startVal[d]);
-                if (dv > valueDiff) valueDiff = dv;
+                if (dv > maxAbs) maxAbs = dv;
             }
+            absValDiff = maxAbs;
         }
 
         // Cek ease di keyframe pertama (normT=0) dan terakhir (normT=1)
-        var e0 = getEaseAtT(points, 0, valueDiff, duration);
-        var e1 = getEaseAtT(points, 1, valueDiff, duration);
+        var e0 = getEaseAtT(points, 0, absValDiff, duration);
+        var e1 = getEaseAtT(points, 1, absValDiff, duration);
 
-        return prop.name + ' vd:' + valueDiff.toFixed(0) + ' dur:' + duration.toFixed(2) +
+        return prop.name + ' vd:' + absValDiff.toFixed(0) + ' dur:' + duration.toFixed(2) +
             ' OUT[inf:' + e0.outInfluence.toFixed(2) + ' spd:' + e0.outSpeed.toFixed(0) + ']' +
             ' IN[inf:' + e1.inInfluence.toFixed(2) + ' spd:' + e1.inSpeed.toFixed(0) + ']';
     } catch(e) { return null; }
@@ -321,6 +323,27 @@ function addAndApply(prop, selKeys, points) {
 }
 
 // ============================================================
+// FLIP POINTS: Mirror kurva secara vertikal (untuk value negatif)
+// ============================================================
+
+function flipPoints(points) {
+    var flipped = [];
+    for (var i = 0; i < points.length; i++) {
+        var pt = points[i];
+        flipped.push({
+            x:    pt.x,
+            y:    1 - pt.y,
+            cp1x: pt.cp1x,
+            cp1y: 1 - pt.cp1y,
+            cp2x: pt.cp2x,
+            cp2y: 1 - pt.cp2y,
+            isNew: pt.isNew
+        });
+    }
+    return flipped;
+}
+
+// ============================================================
 // EASING: Apply bezier ke semua keyframe dalam range waktu
 // ============================================================
 
@@ -328,7 +351,8 @@ function addAndApply(prop, selKeys, points) {
 function applyEasingToRange(prop, startTime, endTime, points) {
     var duration = endTime - startTime;
 
-    // Hitung valueDiff untuk segment ini (untuk speed calculation)
+    // Hitung valueDiff signed — AE KeyframeEase.speed bisa negatif,
+    // tanda negatif menentukan arah grafik speed di graph editor.
     var startVal = null, endVal = null;
     for (var k = 1; k <= prop.numKeys; k++) {
         if (Math.abs(prop.keyTime(k) - startTime) < 0.0001) startVal = prop.keyValue(k);
@@ -337,21 +361,24 @@ function applyEasingToRange(prop, startTime, endTime, points) {
     var valueDiff = 0;
     if (startVal !== null && endVal !== null) {
         if (typeof startVal === 'number') {
-            valueDiff = Math.abs(endVal - startVal);
+            valueDiff = endVal - startVal;
         } else if (startVal.length) {
+            var maxAbs = 0;
             for (var d = 0; d < startVal.length; d++) {
-                var dv = Math.abs(endVal[d] - startVal[d]);
-                if (dv > valueDiff) valueDiff = dv;
+                var dv = endVal[d] - startVal[d];
+                if (Math.abs(dv) > maxAbs) { maxAbs = Math.abs(dv); valueDiff = dv; }
             }
         }
     }
+
+    var pts = points;
 
     for (var k = 1; k <= prop.numKeys; k++) {
         var t = prop.keyTime(k);
         if (t < startTime - 0.0001 || t > endTime + 0.0001) continue;
 
         var normT = (duration > 0) ? (t - startTime) / duration : 0;
-        var ease  = getEaseAtT(points, normT, valueDiff, duration);
+        var ease  = getEaseAtT(pts, normT, valueDiff, duration);
 
         try {
             prop.setInterpolationTypeAtKey(k,
@@ -395,10 +422,11 @@ function applyEasingToRange(prop, startTime, endTime, points) {
 
 function getEaseAtT(points, t, valueDiff, duration) {
     var TEPS = 0.0005;
-    if (!valueDiff || valueDiff <= 0) valueDiff = 1;
-    if (!duration  || duration  <= 0) duration  = 1;
+    // Guard: kalau 0 pakai 1, tapi tanda negatif dibiarkan — AE speed bisa negatif.
+    if (!valueDiff) valueDiff = 1;
+    if (!duration  || duration <= 0) duration = 1;
 
-    // OUT ease: cp2 dari titik START segment berikutnya
+    // OUT ease: cp2 dari titik START segment
     var outInfluence = 33, outSpeed = 0;
     for (var i = 0; i < points.length - 1; i++) {
         if (Math.abs(points[i].x - t) < TEPS) {
@@ -409,12 +437,9 @@ function getEaseAtT(points, t, valueDiff, duration) {
                 var ody = p0.cp2y - p0.y;
                 outInfluence = Math.abs(odx) / segDur * 100;
                 if (Math.abs(odx) > 0.001) {
-                    // slope normalized → konversi ke unit/detik
-                    outSpeed = Math.abs(ody / odx) * (valueDiff / duration);
+                    outSpeed = (ody / odx) * (valueDiff / duration);
                 } else {
-                    // handle vertikal (dx≈0) = slope sangat besar
-                    // pakai epsilon kecil supaya speed proporsional dengan ody
-                    outSpeed = Math.abs(ody) / 0.001 * (valueDiff / duration);
+                    outSpeed = ody / 0.001 * (valueDiff / duration);
                 }
             }
             break;
@@ -428,13 +453,13 @@ function getEaseAtT(points, t, valueDiff, duration) {
             var p0 = points[j], p1 = points[j + 1];
             var segDur = p1.x - p0.x;
             if (segDur > TEPS) {
-                var idx = p1.cp1x - p1.x;
-                var idy = p1.cp1y - p1.y;
+                var idx = p1.x - p1.cp1x;
+                var idy = p1.y - p1.cp1y;
                 inInfluence = Math.abs(idx) / segDur * 100;
                 if (Math.abs(idx) > 0.001) {
-                    inSpeed = Math.abs(idy / idx) * (valueDiff / duration);
+                    inSpeed = (idy / idx) * (valueDiff / duration);
                 } else {
-                    inSpeed = Math.abs(idy) / 0.001 * (valueDiff / duration);
+                    inSpeed = idy / 0.001 * (valueDiff / duration);
                 }
             }
             break;
@@ -719,5 +744,67 @@ function clearBgFromFile() {
         if (gif.exists) gif.remove();
         if (meta.exists) meta.remove();
         return 'ok';
+    } catch(e) { return 'error: ' + e.toString(); }
+}
+
+// ============================================================
+// PRESET SAVE/LOAD via file (Documents/CurveFlow/presets.json)
+// ============================================================
+
+function savePresetsToFile(b64Str, isBase64) {
+    try {
+        ensureDir();
+        var jsonStr = isBase64 ? b64Decode(b64Str) : b64Str;
+        // b64Decode menghasilkan raw bytes, decode UTF-8 manual
+        try { jsonStr = decodeURIComponent(escape(jsonStr)); } catch(e2) {}
+        var file = new File(getExtDir() + '/presets.json');
+        file.encoding = 'UTF-8';
+        file.open('w');
+        file.write(jsonStr);
+        file.close();
+        return 'ok';
+    } catch(e) { return 'error: ' + e.toString(); }
+}
+
+function loadPresetsFromFile() {
+    try {
+        var file = new File(getExtDir() + '/presets.json');
+        if (!file.exists) return '{}';
+        file.encoding = 'UTF-8';
+        file.open('r');
+        var content = file.read();
+        file.close();
+        return content;
+    } catch(e) { return '{}'; }
+}
+
+function exportPresetsToFile(jsonStr) {
+    try {
+        ensureDir();
+        var file = new File(getExtDir() + '/presets.json');
+        file.encoding = 'UTF-8';
+        file.open('w');
+        file.write(jsonStr);
+        file.close();
+        return getExtDir() + '/presets.json';
+    } catch(e) { return 'error: ' + e.toString(); }
+}
+
+function exportPresetsWithDialog(b64Str) {
+    try {
+        var jsonStr = b64Decode(b64Str);
+        try { jsonStr = decodeURIComponent(escape(jsonStr)); } catch(e2) {}
+        var file = File.saveDialog('Export CurveFlow Presets', '*.json');
+        if (!file) return 'cancelled';
+        var path = file.fsName;
+        if (path.substring(path.length - 5).toLowerCase() !== '.json') {
+            path = path + '.json';
+            file = new File(path);
+        }
+        file.encoding = 'UTF-8';
+        file.open('w');
+        file.write(jsonStr);
+        file.close();
+        return path;
     } catch(e) { return 'error: ' + e.toString(); }
 }
