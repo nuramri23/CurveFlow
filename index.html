@@ -2,36 +2,43 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>CurveFlow by anggimv_</title>
+<title>anggi tools</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <div class="header">
-  <span class="logo">CurveFlow <span style="font-weight:400;opacity:0.6;font-size:10px;">by anggimv_</span></span>
+  <span class="logo" id="logoBtn" onclick="showAbout()" title="anggi tools — click for info" style="cursor:pointer;">anggi tools</span>
   <div style="display:flex;align-items:center;gap:7px;">
-    <span style="font-size:10px;color:var(--text-dim)" id="statusText">Ready</span>
-    <div class="status-dot" id="statusDot"></div>
-    <button onclick="location.reload()" title="Refresh panel" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:13px;padding:0 2px;line-height:1;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text-dim)'">↺</button>
-    <button onclick="showAbout()" title="About" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:13px;padding:0 2px;line-height:1;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text-dim)'">ⓘ</button>
+    <div class="status-dot" id="statusDot" title="Status"></div>
   </div>
+</div>
+
+<!-- TAB BAR -->
+<div class="tab-bar" id="tabBar">
+  <button class="tab-btn active" id="tabBtnCurve" onclick="switchTab('curve')">Curve</button>
+  <button class="tab-btn" id="tabBtnTools" onclick="switchTab('tools')">Tools</button>
 </div>
 
 <!-- ABOUT MODAL -->
 <div id="aboutModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:300;align-items:center;justify-content:center;">
   <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:20px 24px;max-width:260px;width:90%;text-align:center;">
-    <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px;">CurveFlow</div>
-    <div style="font-size:11px;color:var(--accent);margin-bottom:12px;">by anggimv_</div>
+    <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px;">anggi tools</div>
+    <div style="font-size:11px;color:var(--accent);margin-bottom:4px;">Connected</div>
     <div style="font-size:10px;color:var(--text-dim);line-height:1.6;margin-bottom:14px;">
-      Curve editor extension untuk After Effects.<br>
-      Terinspirasi dari Flow dan Wavy 3am.<br><br>
+      Curve editor &amp; production tools extension untuk After Effects.<br>
+      anggi tools, made with love.<br><br>
       Dibuat oleh anggimv_.<br>
     </div>
     <div style="font-size:10px;color:var(--border);margin-bottom:14px;">v1.0.0</div>
-    <button onclick="closeAbout()" style="background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:6px;padding:6px 20px;color:#fff;font-size:11px;font-weight:600;cursor:pointer;">Close</button>
+    <div style="display:flex;gap:8px;">
+      <button onclick="location.reload()" style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text-dim);font-size:11px;cursor:pointer;">↺ Refresh</button>
+      <button onclick="closeAbout()" style="flex:1;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:6px;padding:6px 10px;color:#fff;font-size:11px;font-weight:600;cursor:pointer;">Close</button>
+    </div>
   </div>
 </div>
 
+<div class="tab-page" id="tabCurve">
 <div class="main" id="mainLayout">
 
   <!-- LEFT PANEL: canvas + tombol fix (di mode lebar jadi kolom kiri) -->
@@ -42,11 +49,15 @@
       <div class="canvas-label">
         <span>Curve Editor</span>
         <div class="canvas-label-tools">
-          <button class="tool-btn" id="snapBtn" onclick="toggleSnap()">Snap</button>
-          <button class="tool-btn" id="showValsBtn" onclick="toggleShowVals()">X/Y</button>
-          <button class="tool-btn" onclick="bgImageClick()" title="Set background image/gif">BG</button>
-          <button class="tool-btn" id="clearBgBtn" onclick="clearBgImage()" title="Clear background" style="display:none;color:var(--danger)">✕</button>
+          <button class="tool-btn icon-btn" id="snapBtn" onclick="toggleSnap()" title="Snap to grid">⌗</button>
+          <button class="tool-btn icon-btn" id="showValsBtn" onclick="toggleShowVals()" title="Show X/Y values">XY</button>
+          <button class="tool-btn icon-btn" onclick="bgImageClick()" title="Set background image/gif">🖼</button>
+          <button class="tool-btn icon-btn" id="clearBgBtn" onclick="clearBgImage()" title="Clear background" style="display:none;color:var(--danger)">✕</button>
           <input type="file" id="bgImageInput" accept="image/*,.gif" style="display:none" onchange="onBgImageChange(event)"/>
+          <button class="tool-btn icon-btn" onclick="zoomOut()" title="Zoom out">−</button>
+          <span id="zoomVal" style="font-size:10px;color:var(--text-dim);min-width:30px;text-align:center;display:inline-block;">100%</span>
+          <button class="tool-btn icon-btn" onclick="zoomIn()" title="Zoom in">+</button>
+          <button class="tool-btn icon-btn" onclick="zoomReset()" title="Reset zoom">⟲</button>
         </div>
       </div>
       <div class="canvas-container" id="canvasContainer">
@@ -97,6 +108,130 @@
   </div>
 
 </div>
+</div>
+
+<!-- TOOLS TAB -->
+<div class="tab-page" id="tabTools" style="display:none;">
+  <div class="tools-scroll">
+
+    <!-- ANCHOR POINT SECTION -->
+    <div class="tool-section">
+      <div class="tool-section-title">Anchor Point</div>
+      <div class="anchor-grid-wrap" id="anchorGridWrap">
+        <div class="anchor-bg-layer" id="anchorBgLayer"></div>
+        <div class="anchor-grid" id="anchorGrid">
+          <button class="anchor-dot" data-pos="tl" title="Top Left"></button>
+          <button class="anchor-dot" data-pos="tc" title="Top Center"></button>
+          <button class="anchor-dot" data-pos="tr" title="Top Right"></button>
+          <button class="anchor-dot" data-pos="ml" title="Middle Left"></button>
+          <button class="anchor-dot active" data-pos="mc" title="Center"></button>
+          <button class="anchor-dot" data-pos="mr" title="Middle Right"></button>
+          <button class="anchor-dot" data-pos="bl" title="Bottom Left"></button>
+          <button class="anchor-dot" data-pos="bc" title="Bottom Center"></button>
+          <button class="anchor-dot" data-pos="br" title="Bottom Right"></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ALIGN LAYERS SECTION -->
+    <div class="tool-section">
+      <div class="tool-section-title">Align Layers</div>
+      <div class="align-card">
+        <div class="align-target-row">
+          <span class="align-target-label">Align to</span>
+          <select id="alignTargetSelect" class="align-select">
+            <option value="comp">Composition</option>
+            <option value="selection">Selection</option>
+          </select>
+        </div>
+        <div class="align-btn-row">
+          <button class="align-btn" data-mode="left" title="Align Left">
+            <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M4 3h1v18H4V3zm4 3h12v4H8V6zm0 8h8v4H8v-4z"/></svg>
+          </button>
+          <button class="align-btn" data-mode="hcenter" title="Align Horizontal Center">
+            <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M11.5 3h1v18h-1V3zM6 7h5v4H6V7zm7 6h5v4h-5v-4z"/></svg>
+          </button>
+          <button class="align-btn" data-mode="right" title="Align Right">
+            <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M19 3h1v18h-1V3zM4 6h12v4H4V6zm4 8h8v4H8v-4z"/></svg>
+          </button>
+          <button class="align-btn" data-mode="top" title="Align Top">
+            <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M3 4h18v1H3V4zm3 4h4v12H6V8zm8 0h4v8h-4V8z"/></svg>
+          </button>
+          <button class="align-btn" data-mode="vcenter" title="Align Vertical Center">
+            <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M3 11.5h18v1H3v-1zM7 6h4v5H7V6zm6 7h4v5h-4v-5z"/></svg>
+          </button>
+          <button class="align-btn" data-mode="bottom" title="Align Bottom">
+            <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M3 19h18v1H3v-1zM6 4h4v12H6V4zm8 4h4v8h-4V8z"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MORE TOOLS -->
+    <div class="tool-section">
+      <div class="tool-section-title">More Tools</div>
+
+      <!-- Sequence panel -->
+      <div class="sequence-card">
+        <div class="sequence-row">
+          <div class="sequence-field">
+            <label for="seqOffset">Num</label>
+            <input type="number" id="seqOffset" value="1" min="0" step="1"/>
+          </div>
+          <div class="sequence-field">
+            <label for="seqStep">Step</label>
+            <input type="number" id="seqStep" value="1" min="1" step="1"/>
+          </div>
+        </div>
+        <div class="sequence-icon-row">
+          <button class="sequence-icon-btn" onclick="runSequenceLayers('playhead','top')" title="Sequence from playhead">
+            <svg viewBox="0 0 24 24" width="16" height="16">
+              <path fill="currentColor" d="M5 3v2h1v14H5v2h4v-2H8V5h1V3H5z"/>
+              <rect x="10" y="6" width="10" height="2.4" rx="1" fill="currentColor"/>
+              <rect x="10" y="11" width="7" height="2.4" rx="1" fill="currentColor" opacity="0.7"/>
+              <rect x="10" y="16" width="4" height="2.4" rx="1" fill="currentColor" opacity="0.45"/>
+            </svg>
+          </button>
+          <button class="sequence-icon-btn" onclick="runSequenceLayers('original','top')" title="Sequence top to bottom">
+            <svg viewBox="0 0 24 24" width="16" height="16">
+              <rect x="4" y="6" width="10" height="2.4" rx="1" fill="currentColor"/>
+              <rect x="7" y="11" width="10" height="2.4" rx="1" fill="currentColor" opacity="0.7"/>
+              <rect x="10" y="16" width="10" height="2.4" rx="1" fill="currentColor" opacity="0.45"/>
+            </svg>
+          </button>
+          <button class="sequence-icon-btn" onclick="runSequenceLayers('original','bottom')" title="Sequence bottom to top">
+            <svg viewBox="0 0 24 24" width="16" height="16">
+              <rect x="10" y="6" width="10" height="2.4" rx="1" fill="currentColor" opacity="0.45"/>
+              <rect x="7" y="11" width="10" height="2.4" rx="1" fill="currentColor" opacity="0.7"/>
+              <rect x="4" y="16" width="10" height="2.4" rx="1" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
+        <div class="tool-hint" style="display:none;"></div>
+      </div>
+
+      <div class="tools-grid">
+        <button class="tools-card" onclick="runExtractShapes()" title="Split shape groups into separate layers">
+          <span class="tools-card-icon">⤴</span>
+          <span class="tools-card-label">Extract</span>
+        </button>
+        <button class="tools-card" onclick="runMergeShapes()" title="Merge selected shape layers into one">
+          <span class="tools-card-icon">⤵</span>
+          <span class="tools-card-label">Merge</span>
+        </button>
+        <button class="tools-card" onclick="runAddNull()" title="Add Null parent to selected layers">
+          <span class="tools-card-icon">▢</span>
+          <span class="tools-card-label">Add Null</span>
+        </button>
+        <button class="tools-card" onclick="runConvertToShape()" title="Convert text/vector layer to Shape layer">
+          <span class="tools-card-icon">⬡</span>
+          <span class="tools-card-label">Convert to Shape</span>
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
 
 <!-- PRESET NAME POPUP -->
 <div id="presetPopup" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:300;align-items:center;justify-content:center;">
@@ -143,7 +278,7 @@
 
 <script>
 // ================================================
-// CurveFlow by anggimv_ — Curve Editor
+// anggi tools by anggimv_ — Curve Editor
 // ================================================
 
 const canvas  = document.getElementById('curveCanvas');
@@ -185,9 +320,16 @@ let cropDragging = false;
 let cropDragStartX = 0, cropDragStartY = 0;
 let cropDragOrigX = 0, cropDragOrigY = 0;
 
-function bgImageClick() { document.getElementById('bgImageInput').click(); }
+let cropTarget = 'curve'; // 'curve' | 'anchor' — modal crop dipakai bersama dua section
+
+function bgImageClick() { cropTarget = 'curve'; document.getElementById('bgImageInput').click(); }
 
 function onBgImageChange(event) {
+  cropTarget = 'curve';
+  handleBgFileChange(event);
+}
+
+function handleBgFileChange(event) {
   const file = event.target.files[0];
   if (!file) return;
   const url = URL.createObjectURL(file);
@@ -269,11 +411,12 @@ function confirmCrop() {
     const gifCropFH = cropSize / cropDispH;
     if (bgGifEl) { bgGifEl.remove(); bgGifEl = null; }
     if (bgCroppedCanvas) bgCroppedCanvas = null;
-    bgGifEl = applyGifCrop(gifSrc, gifCropL, gifCropT, gifCropFW, gifCropFH);
+    bgGifEl = applyGifCrop(gifSrc, gifCropL, gifCropT, gifCropFW, gifCropFH, container, bgOpacity);
     container.appendChild(bgGifEl);
     // Simpan src (dataURL) + crop ke localStorage supaya bisa reload animated
     const cropInfo = gifCropL + '|' + gifCropT + '|' + gifCropFW + '|' + gifCropFH;
     try { localStorage.setItem('cf_bg', JSON.stringify({ type:'gif', src: gifSrc, crop: cropInfo })); } catch(e) {}
+    syncAnchorBgFromCurve('gif', gifSrc, gifCropL, gifCropT, gifCropFW, gifCropFH);
   } else {
     const offscreen = document.createElement('canvas');
     offscreen.width = offscreen.height = Math.round(srcSize);
@@ -294,10 +437,28 @@ function confirmCrop() {
       localStorage.setItem('cf_bg', JSON.stringify({ type:'jpg', src: imgData }));
       saveBgPersistent(imgData);
     } catch(e) {}
+    syncAnchorBgFromCurve('jpg', imgData);
   }
 
   closeCropModal();
   draw();
+}
+
+// ---- Anchor Point background: selalu mengikuti BG yang di-set di Curve editor,
+// tidak ada upload/crop terpisah untuk section Anchor Point.
+let anchorBgGifEl = null;
+function syncAnchorBgFromCurve(type, src, cropL, cropT, cropFW, cropFH) {
+  const anchorBgLayer = document.getElementById('anchorBgLayer');
+  if (!anchorBgLayer) return;
+  if (anchorBgGifEl) { anchorBgGifEl.remove(); anchorBgGifEl = null; }
+  anchorBgLayer.style.backgroundImage = '';
+  if (type === 'gif') {
+    anchorBgGifEl = applyGifCrop(src, cropL, cropT, cropFW, cropFH, anchorBgLayer, bgOpacity);
+    anchorBgLayer.appendChild(anchorBgGifEl);
+  } else if (type === 'jpg') {
+    anchorBgLayer.style.backgroundImage = `url(${src})`;
+    anchorBgLayer.style.opacity = bgOpacity;
+  }
 }
 
 // Crop box drag
@@ -345,6 +506,10 @@ function clearBgImage() {
   document.getElementById('clearBgBtn').style.display = 'none';
   try { localStorage.removeItem('cf_bg'); } catch(e) {}
   try { clearBgPersistent(); } catch(e) {}
+  // Anchor Point card mengikuti BG Curve — ikut dikosongkan
+  if (anchorBgGifEl) { anchorBgGifEl.remove(); anchorBgGifEl = null; }
+  const anchorBgLayer = document.getElementById('anchorBgLayer');
+  if (anchorBgLayer) anchorBgLayer.style.backgroundImage = '';
   draw();
 }
 
@@ -353,11 +518,12 @@ let csInterface = null;
 // Buat GIF overlay dengan crop yang benar (tidak melebar)
 // cL, cT = fraksi kiri/atas dari gambar (0-1)
 // cFW, cFH = fraksi lebar/tinggi dari gambar yang di-crop (0-1)
-function applyGifCrop(src, cL, cT, cFW, cFH) {
+// opacity = opsional, default ke bgOpacity milik curve
+function applyGifCrop(src, cL, cT, cFW, cFH, appendTarget, opacity) {
   // Wrapper overflow:hidden — area tampil = 100% canvas
   const wrapper = document.createElement('div');
-  wrapper.id = 'bgGifOverlay';
-  wrapper.style.cssText = `position:absolute;top:0;left:0;width:100%;height:100%;overflow:hidden;border-radius:8px;pointer-events:none;opacity:${bgOpacity};`;
+  wrapper.id = appendTarget === container ? 'bgGifOverlay' : 'anchorBgGifOverlay';
+  wrapper.style.cssText = `position:absolute;top:0;left:0;width:100%;height:100%;overflow:hidden;border-radius:8px;pointer-events:none;opacity:${opacity != null ? opacity : bgOpacity};`;
 
   const img = document.createElement('img');
   img.src = src;
@@ -538,6 +704,8 @@ let baseTensionPoints = null; // points sebelum tension diubah
 
 function onTensionChange(val) {
   document.getElementById('tensionVal').textContent = val;
+  const ts = document.getElementById('tensionSlider');
+  if (ts) ts.style.setProperty('--fill', ((parseFloat(val) + 100) / 200 * 100) + '%');
   if (!baseTensionPoints) baseTensionPoints = JSON.parse(JSON.stringify(points));
   const t = val / 100; // -1 to 1
   // Apply tension: geser handle mendekati atau menjauhi titik
@@ -587,7 +755,7 @@ function updateLayout() {
     rightPanel.style.maxWidth = '';
   }
 
-  PAD = isWide ? 85 : 40;
+  PAD = isWide ? 40 : 40;
 
   setCanvasSize();
   requestAnimationFrame(updatePresetColumns);
@@ -597,8 +765,12 @@ function setCanvasSize() {
   const rect = container.getBoundingClientRect();
   const w = Math.floor(rect.width) || 300;
   const h = Math.floor(rect.height) || 300;
-  canvas.width = w;
-  canvas.height = h;
+  // Kunci canvas jadi persegi: sisi = sisi terpendek dari container
+  const side = Math.max(100, Math.min(w, h));
+  canvas.width = side;
+  canvas.height = side;
+  canvas.style.width = side + 'px';
+  canvas.style.height = side + 'px';
   draw();
 }
 
@@ -622,6 +794,12 @@ document.addEventListener('visibilitychange', () => {
 
 // Observe preset scroll container langsung supaya kolom update akurat
 const roPreset = new ResizeObserver(() => { updatePresetColumns(); });
+{
+  const presetsGridEl = document.getElementById('presetsGrid');
+  if (presetsGridEl && presetsGridEl.parentElement) {
+    roPreset.observe(presetsGridEl.parentElement);
+  }
+}
 
 // ---- Splitter drag ----
 const splitterV = document.getElementById('splitterV');
@@ -722,14 +900,39 @@ function loadPresetsFromFileAndMerge() {
   });
 }
 
+// ---- Zoom ----
+let zoomLevel = 1; // 1 = normal (area 0..1 penuh). >1 = zoom in, <1 = zoom out
+const ZOOM_MIN = 0.4;
+const ZOOM_MAX = 3;
+const ZOOM_STEP = 1.25;
+
+function setZoom(z) {
+  zoomLevel = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z));
+  updateZoomLabel();
+  draw();
+}
+function zoomIn()  { setZoom(zoomLevel * ZOOM_STEP); }
+function zoomOut() { setZoom(zoomLevel / ZOOM_STEP); }
+function zoomReset(){ setZoom(1); }
+function updateZoomLabel() {
+  const el = document.getElementById('zoomVal');
+  if (el) el.textContent = Math.round(zoomLevel * 100) + '%';
+}
+
 // ---- Coordinate conversion ----
+// Zoom membesarkan/mengecilkan area 0..1 di sekitar pusat (0.5, 0.5),
+// sehingga titik overshoot (y<0 atau y>1) bisa terlihat dengan zoom out.
 function toScreen(nx, ny) {
   const drawW = canvas.width - PAD*2, drawH = canvas.height - PAD*2;
-  return { x: PAD + nx * drawW, y: PAD + (1 - ny) * drawH };
+  const zx = 0.5 + (nx - 0.5) * zoomLevel;
+  const zy = 0.5 + (ny - 0.5) * zoomLevel;
+  return { x: PAD + zx * drawW, y: PAD + (1 - zy) * drawH };
 }
 function toNorm(sx, sy) {
   const drawW = canvas.width - PAD*2, drawH = canvas.height - PAD*2;
-  return { x: (sx - PAD) / drawW, y: 1 - (sy - PAD) / drawH };
+  const zx = (sx - PAD) / drawW;
+  const zy = 1 - (sy - PAD) / drawH;
+  return { x: 0.5 + (zx - 0.5) / zoomLevel, y: 0.5 + (zy - 0.5) / zoomLevel };
 }
 function getMousePos(e) {
   const rect = canvas.getBoundingClientRect();
@@ -962,6 +1165,12 @@ canvas.addEventListener('mousemove', e => {
 canvas.addEventListener('mouseup', () => { dragging = null; });
 canvas.addEventListener('mouseleave', () => { dragging = null; hoveredPoint = null; draw(); });
 
+// ---- Scroll wheel: zoom canvas ----
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  if (e.deltaY < 0) zoomIn(); else zoomOut();
+}, { passive: false });
+
 // ---- Double click: add point ----
 canvas.addEventListener('dblclick', e => {
   const pos = getMousePos(e);
@@ -1094,7 +1303,7 @@ function deleteSelectedPreset() {
 function exportPresets() {
   const up = loadUserPresets();
   if (!Object.keys(up).length) { showToast('No user presets to export','error'); return; }
-  const json = JSON.stringify({version:'1.0',app:'CurveFlow',presets:up},null,2);
+  const json = JSON.stringify({version:'1.0',app:'AnggiTools',presets:up},null,2);
   if (csInterface) {
     try {
       const b64 = btoa(unescape(encodeURIComponent(json)));
@@ -1116,7 +1325,7 @@ function exportPresets() {
     const blob = new Blob([json],{type:'application/json'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href=url; a.download='curveflow-presets.json';
+    a.href=url; a.download='anggitools-presets.json';
     document.body.appendChild(a); a.click();
     document.body.removeChild(a); URL.revokeObjectURL(url);
     showToast(`Exported ${Object.keys(up).length} preset(s)`,'success');
@@ -1125,7 +1334,7 @@ function exportPresets() {
 
 function importPresetsClick() { document.getElementById('importFileInput').click(); }
 
-// Konversi format Flow [x1,y1,x2,y2] ke format CurveFlow points array
+// Konversi format Flow [x1,y1,x2,y2] ke format anggitools points array
 function flowValueToPoints(v) {
   var x1=v[0], y1=v[1], x2=v[2], y2=v[3];
   return [
@@ -1152,7 +1361,7 @@ function importPresets(event) {
           count++;
         });
       } else {
-        // Format CurveFlow JSON
+        // Format anggitools JSON
         const incoming=data.presets||data;
         Object.keys(incoming).forEach(name=>{
           if (!Array.isArray(incoming[name])) return;
@@ -1234,7 +1443,10 @@ function applyToAE() {
     showToast('Overshoot with 2 keyframes may look stiff', 'warn');
   }
 
-  if (curveIsOutOfBounds()) {
+  // Separate-dimensions confirm hanya relevan untuk kasus 2 keyframe (1 segmen).
+  // Untuk N>2 (per-segment / redistribute), overshoot per segmen itu normal
+  // dan tidak perlu memaksa separate dimensions.
+  if (points.length === 2 && curveIsOutOfBounds()) {
     csInterface.evalScript('checkSelectedAreSeparated()', function(result) {
       try {
         var res = JSON.parse(result);
@@ -1319,7 +1531,6 @@ document.getElementById('presetPopup').addEventListener('click', function(e) {
 
 function setStatus(active, text) {
   document.getElementById('statusDot').className='status-dot'+(active?' active':'');
-  document.getElementById('statusText').textContent=text||'Ready';
 }
 
 function showAbout() {
@@ -1332,6 +1543,125 @@ function closeAbout() {
 document.getElementById('aboutModal').addEventListener('click', function(e) {
   if (e.target === this) closeAbout();
 });
+
+// ---- Tab switching ----
+function switchTab(name) {
+  const isCurve = name === 'curve';
+  document.getElementById('tabCurve').style.display = isCurve ? '' : 'none';
+  document.getElementById('tabTools').style.display = isCurve ? 'none' : '';
+  document.getElementById('tabBtnCurve').classList.toggle('active', isCurve);
+  document.getElementById('tabBtnTools').classList.toggle('active', !isCurve);
+  if (isCurve) {
+    // Layout curve editor perlu di-recalculate saat tab kembali terlihat
+    requestAnimationFrame(() => { updateLayout(); });
+  }
+}
+
+// ---- Anchor Point tool ----
+document.querySelectorAll('.anchor-dot').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const pos = btn.getAttribute('data-pos');
+    document.querySelectorAll('.anchor-dot').forEach(d => d.classList.remove('active'));
+    btn.classList.add('active');
+    if (typeof csInterface === 'undefined') {
+      showToast(`Preview mode — anchor: ${pos}`, 'success');
+      return;
+    }
+    csInterface.evalScript(`setAnchorPoint('${pos}')`, function(result) {
+      try {
+        const res = JSON.parse(result);
+        if (res.success) {
+          showToast(`Anchor point set (${res.affected} layer)`, 'success');
+        } else {
+          showToast(res.error || 'Error', 'error');
+        }
+      } catch(e) { showToast('Error running anchor tool', 'error'); }
+    });
+  });
+});
+
+// ---- Align Layers tool ----
+document.querySelectorAll('.align-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const mode = btn.getAttribute('data-mode');
+    const target = document.getElementById('alignTargetSelect').value;
+    if (typeof csInterface === 'undefined') {
+      showToast(`Preview mode — align: ${mode} (${target})`, 'success');
+      return;
+    }
+    csInterface.evalScript(`alignLayers('${mode}','${target}')`, function(result) {
+      try {
+        const res = JSON.parse(result);
+        if (res.success) {
+          showToast(`Aligned ${res.affected} layer`, 'success');
+        } else {
+          showToast(res.error || 'Error', 'error');
+        }
+      } catch(e) { showToast('Error running align tool', 'error'); }
+    });
+  });
+});
+
+// ---- More Tools ----
+function runSequenceLayers(anchorMode, direction) {
+  const offset = document.getElementById('seqOffset').value;
+  const step = document.getElementById('seqStep').value;
+  if (typeof csInterface === 'undefined') {
+    showToast(`Preview mode — sequence Num:${offset} Step:${step} (${anchorMode}, ${direction})`, 'success');
+    return;
+  }
+  csInterface.evalScript(`sequenceLayers(${JSON.stringify(offset)},${JSON.stringify(step)},'${anchorMode}','${direction}')`, function(result) {
+    try {
+      const res = JSON.parse(result);
+      if (res.success) showToast(`Sequenced ${res.affected} ${res.mode === 'keyframe' ? 'keyframe group' : 'layer'}`, 'success');
+      else showToast(res.error || 'Error', 'error');
+    } catch(e) { showToast('Error running sequence tool', 'error'); }
+  });
+}
+
+function runExtractShapes() {
+  if (typeof csInterface === 'undefined') { showToast('Preview mode — extract shapes', 'success'); return; }
+  csInterface.evalScript('extractShapeGroups(true)', function(result) {
+    try {
+      const res = JSON.parse(result);
+      if (res.success) showToast(`Extracted ${res.affected} group`, 'success');
+      else showToast(res.error || 'Error', 'error');
+    } catch(e) { showToast('Error running extract tool', 'error'); }
+  });
+}
+
+function runMergeShapes() {
+  if (typeof csInterface === 'undefined') { showToast('Preview mode — merge shapes', 'success'); return; }
+  csInterface.evalScript('mergeShapeLayers(true)', function(result) {
+    try {
+      const res = JSON.parse(result);
+      if (res.success) showToast(`Merged ${res.affected} layer`, 'success');
+      else showToast(res.error || 'Error', 'error');
+    } catch(e) { showToast('Error running merge tool', 'error'); }
+  });
+}
+
+function runAddNull() {
+  if (typeof csInterface === 'undefined') { showToast('Preview mode — add null', 'success'); return; }
+  csInterface.evalScript('addNullParent()', function(result) {
+    try {
+      const res = JSON.parse(result);
+      if (res.success) showToast(`Null added, parented ${res.affected} layer`, 'success');
+      else showToast(res.error || 'Error', 'error');
+    } catch(e) { showToast('Error running add null tool', 'error'); }
+  });
+}
+
+function runConvertToShape() {
+  if (typeof csInterface === 'undefined') { showToast('Preview mode — convert to shape', 'success'); return; }
+  csInterface.evalScript('convertToShape(false)', function(result) {
+    try {
+      const res = JSON.parse(result);
+      if (res.success) showToast(`Converted ${res.affected} layer`, 'success');
+      else showToast(res.error || 'Error', 'error');
+    } catch(e) { showToast('Error running convert tool', 'error'); }
+  });
+}
 
 let toastTimer;
 function showToast(msg, type) {
@@ -1374,8 +1704,10 @@ function init() {
         const cFW = parseFloat(cp[2]) || 1;
         const cFH = parseFloat(cp[3]) || 1;
         if (bgGifEl) { bgGifEl.remove(); bgGifEl = null; }
-        bgGifEl = applyGifCrop(fileUrl, cL, cT, cFW, cFH);
+        bgGifEl = applyGifCrop(fileUrl, cL, cT, cFW, cFH, container, bgOpacity);
         container.appendChild(bgGifEl);
+        // Anchor Point card mengikuti BG Curve yang baru dimuat
+        syncAnchorBgFromCurve('gif', fileUrl, cL, cT, cFW, cFH);
       } else {
         // JPG: load ke canvas
         const img = new Image();
@@ -1389,6 +1721,8 @@ function init() {
         };
         img.onerror = () => console.log('BG load error:', fileUrl);
         img.src = fileUrl;
+        // Anchor Point card mengikuti BG Curve yang baru dimuat
+        syncAnchorBgFromCurve('jpg', fileUrl);
       }
     });
   }, 1000);

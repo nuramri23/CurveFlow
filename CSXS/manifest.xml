@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ExtensionManifest Version="7.0"
-    ExtensionBundleId="com.curveflow.extension"
+    ExtensionBundleId="com.anggitools.extension"
     ExtensionBundleVersion="1.0.0"
-    ExtensionBundleName="CurveFlow by anggimv_">
+    ExtensionBundleName="anggi tools">
     <ExtensionList>
-        <Extension Id="com.curveflow.panel" Version="1.0.0"/>
+        <Extension Id="com.anggitools.panel" Version="1.0.0"/>
     </ExtensionList>
     <ExecutionEnvironment>
         <HostList>
@@ -18,7 +18,7 @@
         </RequiredRuntimeList>
     </ExecutionEnvironment>
     <DispatchInfoList>
-        <Extension Id="com.curveflow.panel">
+        <Extension Id="com.anggitools.panel">
             <DispatchInfo>
                 <Resources>
                     <MainPath>./index.html</MainPath>
@@ -34,7 +34,7 @@
                 </Lifecycle>
                 <UI>
                     <Type>Panel</Type>
-                    <Menu>CurveFlow by anggimv_</Menu>
+                    <Menu>anggi tools</Menu>
                     <Geometry>
                         <Size>
                             <Width>340</Width>

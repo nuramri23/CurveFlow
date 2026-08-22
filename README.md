@@ -1,6 +1,6 @@
-# CurveFlow by anggimv_
+# anggi tools by anggimv_
 
-Curve editor extension untuk After Effects, terinspirasi dari Flow dan wavy 3am.
+Curve editor & production tools extension untuk After Effects, made with love.
 
 ## Fitur
 - **Curve editor** — drag titik & handle untuk ubah easing
@@ -56,7 +56,7 @@ C:\Program Files (x86)\Common Files\Adobe\CEP\extensions\
 Tutup dan buka ulang AE.
 
 ### 4. Buka panel
-**Window → Extensions → CurveFlow by anggimv_**
+**Window → Extensions → anggi tools by anggimv_**
 
 ---
 
@@ -84,5 +84,5 @@ curveflow-extension/
 
 ## Data yang Disimpan
 Background image disimpan di:
-- **Windows**: `Documents\CurveFlow\bg_cache.json`
-- **Mac**: `~/Documents/CurveFlow/bg_cache.json`
+- **Windows**: `Documents\anggi tools\bg_cache.json`
+- **Mac**: `~/Documents/anggi tools/bg_cache.json`
